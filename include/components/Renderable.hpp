@@ -5,7 +5,12 @@
 
 struct Renderable
 {
-    Renderable(sf::Vector2f pPos) : mPos(pPos){}
+    Renderable()
+    {
+    }
+    Renderable(sf::Vector2f pPos) : mPos(pPos)
+    {
+    }
     sf::Vector2f mPos;
     sf::FloatRect mRect;
 };

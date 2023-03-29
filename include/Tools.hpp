@@ -33,6 +33,47 @@ class Tools
     {
         return tileToGlobal(globalToTile(global));
     }
+    static std::string uuidFromTimestamp()
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<unsigned char> dis(0, 255);
+
+        auto now = std::chrono::high_resolution_clock::now();
+        auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+
+        std::array<unsigned char, 16> uuid;
+        for (int i = 0; i < 8; i++)
+        {
+            uuid[i] = static_cast<unsigned char>((timestamp >> ((7 - i) * 8)) & 0xFF);
+        }
+        for (int i = 8; i < 16; i++)
+        {
+            uuid[i] = dis(gen);
+        }
+
+        // Set version number
+        uuid[6] &= 0x0F;
+        uuid[6] |= 0x10;
+
+        // Set variant
+        uuid[8] &= 0x3F;
+        uuid[8] |= 0x80;
+
+        std::stringstream ss;
+        ss << std::hex << std::setfill('0');
+
+        for (int i = 0; i < 16; i++)
+        {
+            ss << std::setw(2) << static_cast<unsigned>(uuid[i]);
+            if (i == 3 || i == 5 || i == 7 || i == 9)
+            {
+                ss << '-';
+            }
+        }
+
+        return ss.str();
+    }
 };
 
 #endif

@@ -7,18 +7,18 @@ Application::Application(int argc, char **arguments)
 {
 
     mWindow.setFramerateLimit(100);
-    std::string arg1;
+    std::string lastArg;
     if (argc > 1)
     {
-        arg1 = {arguments[1]};
+        lastArg = {arguments[argc - 1]};
     }
     else
     {
-        arg1 = "";
+        lastArg = "";
     }
 
     // System order is important !
-    if (arg1 == "--debug")
+    if (lastArg == "--debug")
     {
         systems.add<DebugSystem, sf::RenderTarget &>(mWindow);
     }
@@ -27,12 +27,8 @@ Application::Application(int argc, char **arguments)
     systems.add<KeyBoardManagingSystem>(mWindow);
     systems.add<MouseManagingSystem>(mWindow);
     systems.add<CollisionSystem>();
+    systems.add<NetworkClientSystem>();
     systems.configure();
-
-    entityx::Entity e = entities.create();
-    e.assign<Playable>("Roger");
-    e.assign<Renderable>(sf::Vector2f(64 + 16, 64 + 16));
-    e.assign<Movable>(sf::Vector2f(0.f, 0.f));
 
     entityx::Entity map = entities.create();
     map.assign<TileMap>();

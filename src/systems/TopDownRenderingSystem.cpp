@@ -27,24 +27,22 @@ void TopDownRenderingSystem::update(entityx::EntityManager &es, entityx::EventMa
 void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
 {
     // Pour chaque Joueur...
-    es.each<Playable, Renderable, Movable>(
-        [&](entityx::Entity entity, Playable &playable, Renderable &renderable, Movable &movable) {
-            // Constitution du vecteur de points du joueur et affichage.
-            sf::VertexArray quad(sf::TriangleStrip, 4);
-            quad[0].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
-            quad[1].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y + mTileSize);
-            quad[2].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y);
-            quad[3].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y + mTileSize);
+    es.each<Playable, Renderable>([&](entityx::Entity entity, Playable &playable, Renderable &renderable) {
+        // Constitution du vecteur de points du joueur et affichage.
+        sf::VertexArray quad(sf::TriangleStrip, 4);
+        quad[0].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
+        quad[1].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y + mTileSize);
+        quad[2].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y);
+        quad[3].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y + mTileSize);
 
-            quad[0].texCoords = sf::Vector2f(0, 0);
-            quad[1].texCoords = sf::Vector2f(0, mTileSize);
-            quad[2].texCoords = sf::Vector2f(mTileSize, 0);
-            quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+        quad[0].texCoords = sf::Vector2f(0, 0);
+        quad[1].texCoords = sf::Vector2f(0, mTileSize);
+        quad[2].texCoords = sf::Vector2f(mTileSize, 0);
+        quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
 
-            // On dessine le joueur.
-            mTarget.draw(quad, mPlayerState);
-
-        });
+        // On dessine le joueur.
+        mTarget.draw(quad, mPlayerState);
+    });
 }
 void TopDownRenderingSystem::drawBackground(entityx::EntityManager &es)
 {

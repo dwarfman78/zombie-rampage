@@ -2,10 +2,14 @@
 void MovingSystem::configure(entityx::EventManager &event_manager)
 {
     event_manager.subscribe<CollisionEvent>(*this);
+    event_manager.subscribe<NetworkEvent>(*this);
 }
 void MovingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
     es.each<Movable, Renderable>([&](entityx::Entity entity, Movable &movable, Renderable &renderable) {
+        // renderable.mPos = mNetworkPositionEvents[entity.id()];
+        mNetworkPositionEvents.erase(entity.id());
+
         handleKeyBoardEvents(movable);
         handleCollisionEvents(entity, movable, renderable);
 
@@ -173,4 +177,8 @@ void MovingSystem::receive(const CollisionEvent &event)
     CollisionEvent ce(event);
 
     mCollisions[event.mEntityId] = ce;
+}
+void MovingSystem::receive(const NetworkEvent &event)
+{
+    mNetworkPositionEvents[event.entityId] = {event.entityPosition};
 }
