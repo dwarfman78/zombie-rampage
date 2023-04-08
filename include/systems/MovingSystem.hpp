@@ -1,6 +1,7 @@
 #ifndef ZR_MOVINGSYSTEM_HPP
 #define ZR_MOVINGSYSTEM_HPP
 #include "../Common.hpp"
+#include "../components/Actionable.hpp"
 #include "../components/Events.hpp"
 #include "../components/Movable.hpp"
 #include "../components/NetworkEvent.hpp"
@@ -21,7 +22,7 @@ class MovingSystem : public entityx::System<MovingSystem>, public entityx::Recei
     void receive(const NetworkEvent &event);
 
   private:
-    void handleKeyBoardEvents(Movable &movable);
+    void handleMovingActions(Actionable &actionable, Movable &movable);
     void handleCollisionEvents(entityx::Entity &entity, Movable &movable, Renderable &renderable);
 
     // maybe should be stored at the entity level

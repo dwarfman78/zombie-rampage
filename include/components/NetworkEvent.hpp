@@ -1,6 +1,7 @@
 #ifndef ZR_NETWORKEVENT_HPP
 #define ZR_NETWORKEVENT_HPP
 #include "../Common.hpp"
+#include "../Tools.hpp"
 struct NetworkEvent
 {
     enum Type
@@ -10,6 +11,9 @@ struct NetworkEvent
         EntityPosition,
         EntityCreation,
         EntitySuppression,
+        KeyPressed,
+        KeyReleased,
+        PlayerAction,
         Message
     };
     /**
@@ -43,6 +47,17 @@ struct NetworkEvent
         case EntitySuppression:
             return packet << static_cast<int32_t>(event.type) << event.entityId.id();
             break;
+        case KeyPressed:
+            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
+                          << static_cast<int32_t>(event.keyCode);
+        case KeyReleased:
+            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
+                          << static_cast<int32_t>(event.keyCode);
+            break;
+        case PlayerAction:
+            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
+                          << Tools::actionsToBitset(event.actions).to_string();
+            break;
         default:
             return packet << static_cast<int32_t>(event.type);
         }
@@ -68,6 +83,25 @@ struct NetworkEvent
         case Message:
             packet >> event.message;
             break;
+        case KeyPressed: {
+            receiveEntityId(packet, event);
+            int32_t receiveKeyCode;
+            packet >> receiveKeyCode;
+            event.keyCode = static_cast<sf::Keyboard::Key>(receiveKeyCode);
+        }
+        break;
+        case KeyReleased: {
+            receiveEntityId(packet, event);
+            int32_t receiveKeyCode;
+            packet >> receiveKeyCode;
+            event.keyCode = static_cast<sf::Keyboard::Key>(receiveKeyCode);
+        }
+        break;
+        case PlayerAction: {
+            receiveEntityId(packet, event);
+            receiveEntityActions(packet, event);
+        }
+        break;
         case EntityPosition: {
 
             receiveEntityId(packet, event);
@@ -104,10 +138,24 @@ struct NetworkEvent
         event.entityId = receivedId;
     }
 
+    static void receiveEntityActions(sf::Packet &packet, NetworkEvent &event)
+    {
+        std::string bitstring;
+        packet >> bitstring;
+        std::bitset<4> bitset(bitstring);
+
+        for (unsigned int i = 0; i < bitset.size(); ++i)
+        {
+            event.actions[static_cast<Actionable::Action>(i)] = bitset[i];
+        }
+    }
+
     std::string message;
     std::string clientUuid;
     sf::Vector2f entityPosition;
     entityx::Entity::Id entityId;
+    sf::Keyboard::Key keyCode;
+    std::map<Actionable::Action, bool> actions;
     Type type;
 };
 #endif

@@ -1,6 +1,7 @@
 #ifndef ZR_TOOLS_HPP
 #define ZR_TOOLS_HPP
 #include "Common.hpp"
+#include "components/Actionable.hpp"
 class Tools
 {
   public:
@@ -32,6 +33,26 @@ class Tools
     static float globalToTileToGlobal(float global)
     {
         return tileToGlobal(globalToTile(global));
+    }
+    static sf::Packet preparePacket(const std::string &destinationIp, unsigned short destinationPort)
+    {
+        sf::Packet packet;
+        sf::IpAddress server = {destinationIp};
+        unsigned short port = destinationPort;
+
+        return packet;
+    }
+    static std::bitset<4> actionsToBitset(const std::map<Actionable::Action, bool> &actions)
+    {
+        std::bitset<4> binaryRepresentation;
+        unsigned short rank = 0;
+
+        for (auto it = actions.begin(); it != actions.end(); ++it)
+        {
+            binaryRepresentation.set(rank, it->second);
+            rank++;
+        }
+        return binaryRepresentation;
     }
     static std::string uuidFromTimestamp()
     {

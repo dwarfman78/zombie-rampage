@@ -3,7 +3,9 @@
 #include "../Common.hpp"
 struct Playable
 {
-    Playable(std::string pPlayerName) : playerName(pPlayerName) {}
+    Playable(std::string pPlayerName) : playerName(pPlayerName)
+    {
+    }
     std::string playerName;
     entityx::Entity::Id serverSideId;
 };

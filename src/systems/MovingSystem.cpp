@@ -6,16 +6,14 @@ void MovingSystem::configure(entityx::EventManager &event_manager)
 }
 void MovingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-    es.each<Movable, Renderable>([&](entityx::Entity entity, Movable &movable, Renderable &renderable) {
-        // renderable.mPos = mNetworkPositionEvents[entity.id()];
-        mNetworkPositionEvents.erase(entity.id());
+    es.each<Movable, Renderable, Actionable>(
+        [&](entityx::Entity entity, Movable &movable, Renderable &renderable, Actionable &actionable) {
+            handleMovingActions(actionable, movable);
+            handleCollisionEvents(entity, movable, renderable);
 
-        handleKeyBoardEvents(movable);
-        handleCollisionEvents(entity, movable, renderable);
-
-        renderable.mPos += (movable.mAcceleration * static_cast<float>(dt)) / 450.f;
-        renderable.mRect = {renderable.mPos, {32, 32}};
-    });
+            renderable.mPos += (movable.mAcceleration * static_cast<float>(dt)) / 1000.f;
+            renderable.mRect = {renderable.mPos, {32, 32}};
+        });
 }
 void MovingSystem::handleCollisionEvents(entityx::Entity &entity, Movable &movable, Renderable &renderable)
 {
@@ -56,9 +54,9 @@ void MovingSystem::handleCollisionEvents(entityx::Entity &entity, Movable &movab
         mCollisions.erase(entity.id());
     }
 }
-void MovingSystem::handleKeyBoardEvents(Movable &movable)
+void MovingSystem::handleMovingActions(Actionable &actionable, Movable &movable)
 {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    if (actionable.actions[Actionable::Action::RUNLEFT])
     {
         if (movable.mAcceleration.x > 0)
         {
@@ -73,7 +71,7 @@ void MovingSystem::handleKeyBoardEvents(Movable &movable)
             movable.mAcceleration.x = -100;
         }
     }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    else if (actionable.actions[Actionable::Action::RUNRIGHT])
     {
         if (movable.mAcceleration.x < 0)
         {
@@ -115,7 +113,7 @@ void MovingSystem::handleKeyBoardEvents(Movable &movable)
         }
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    if (actionable.actions[Actionable::Action::RUNUP])
     {
         if (movable.mAcceleration.y > 0)
         {
@@ -130,7 +128,7 @@ void MovingSystem::handleKeyBoardEvents(Movable &movable)
             movable.mAcceleration.y = -100;
         }
     }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+    else if (actionable.actions[Actionable::Action::RUNDOWN])
     {
         if (movable.mAcceleration.y < 0)
         {

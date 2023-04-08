@@ -9,7 +9,6 @@ void NetworkClientSystem::configure(entityx::EventManager &event_manager)
 
 void NetworkClientSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-
     if (mStatus == Disconnected && !mDying)
     {
         sendConnection();
@@ -36,6 +35,16 @@ void NetworkClientSystem::update(entityx::EntityManager &es, entityx::EventManag
 
             // sendHeartBeat();
         }
+
+        es.each<Playable, Actionable>([&](entityx::Entity entity, Playable &playable, Actionable &actionable) {
+            auto bitsetActions = Tools::actionsToBitset(actionable.actions);
+            if (bitsetActions != mLastSentActions)
+            {
+                sendActions(actionable.actions);
+
+                mLastSentActions = bitsetActions;
+            }
+        });
     }
 }
 void NetworkClientSystem::handlePacket(sf::Packet &packet, entityx::EntityManager &entities,
@@ -45,40 +54,65 @@ void NetworkClientSystem::handlePacket(sf::Packet &packet, entityx::EntityManage
 
     packet >> incomingEvent;
 
-    if (incomingEvent.type == NetworkEvent::Type::EntityCreation)
+    switch (incomingEvent.type)
     {
-
-        std::cout << " Received EntityCreation : Entity Id : " << incomingEvent.entityId.id()
-                  << " UUID : " << incomingEvent.clientUuid << " entityPosition : " << incomingEvent.entityPosition.x
-                  << ", " << incomingEvent.entityPosition.y << std::endl;
-
-        entityx::Entity e = entities.create();
-        e.assign<Playable>("Roger");
-        e.assign<Renderable>(incomingEvent.entityPosition);
-
-        if (mStatus == Pending && incomingEvent.clientUuid == mUuid)
-        {
-            e.assign<Movable>(sf::Vector2f(0.f, 0.f));
-            mStatus = Connected;
-            std::cout << "Local personnal id : " << e.id().id() << std::endl;
-            mId = e.id();
-        }
-
-        std::cout << "Mapping local entity id : " << e.id().id()
-                  << " to distant entity : " << incomingEvent.entityId.id() << std::endl;
-        mDistantToLocalEntitiesIds[incomingEvent.entityId] = e.id();
-        mLocalToDistantEntitiesIds[e.id()] = incomingEvent.entityId;
-    }
-    else if (incomingEvent.type == NetworkEvent::Type::EntitySuppression)
-    {
-        std::cout << "Received EntitySuppression : EntityId : " << incomingEvent.entityId.id() << std::endl;
-        auto localId = mDistantToLocalEntitiesIds[incomingEvent.entityId];
-        mLocalToDistantEntitiesIds.erase(localId);
-        mDistantToLocalEntitiesIds.erase(incomingEvent.entityId);
-        entities.destroy(incomingEvent.entityId);
+    case NetworkEvent::Type::EntityCreation:
+        handleEntityCreation(entities, incomingEvent);
+        break;
+    case NetworkEvent::Type::EntitySuppression:
+        handleEntitySuppression(entities, incomingEvent);
+        break;
+    case NetworkEvent::Type::EntityPosition:
+        handleEntityPosition(entities, incomingEvent);
+    default:;
+        break;
     }
 
     events.emit<NetworkEvent>(incomingEvent);
+}
+void NetworkClientSystem::handleEntityPosition(entityx::EntityManager &entities, NetworkEvent &incomingEvent)
+{
+    std::cout << "Received EntityPosition : EntityId : " << incomingEvent.entityId.id() << " new Pos : ( "
+              << incomingEvent.entityPosition.x << " , " << incomingEvent.entityPosition.y << " ) " << std::endl;
+
+    entities.each<Renderable>([&](entityx::Entity entity, Renderable &renderable) {
+        if (entity.id() == mDistantToLocalEntitiesIds[incomingEvent.entityId])
+        {
+            renderable.mPos = incomingEvent.entityPosition;
+        }
+    });
+}
+void NetworkClientSystem::handleEntitySuppression(entityx::EntityManager &entities, NetworkEvent &incomingEvent)
+{
+    std::cout << "Received EntitySuppression : EntityId : " << incomingEvent.entityId.id() << std::endl;
+    auto localId = mDistantToLocalEntitiesIds[incomingEvent.entityId];
+    mLocalToDistantEntitiesIds.erase(localId);
+    mDistantToLocalEntitiesIds.erase(incomingEvent.entityId);
+    entities.destroy(incomingEvent.entityId);
+}
+void NetworkClientSystem::handleEntityCreation(entityx::EntityManager &entities, NetworkEvent &incomingEvent)
+{
+    std::cout << " Received EntityCreation : Entity Id : " << incomingEvent.entityId.id()
+              << " UUID : " << incomingEvent.clientUuid << " entityPosition : " << incomingEvent.entityPosition.x
+              << ", " << incomingEvent.entityPosition.y << std::endl;
+
+    entityx::Entity e = entities.create();
+    e.assign<Renderable>(incomingEvent.entityPosition);
+    e.assign<Movable>(sf::Vector2f(0.f, 0.f));
+    e.assign<Actionable>();
+
+    if (mStatus == Pending && incomingEvent.clientUuid == mUuid)
+    {
+        e.assign<Playable>("Roger");
+        mStatus = Connected;
+        std::cout << "Local personnal id : " << e.id().id() << std::endl;
+        mId = e.id();
+    }
+
+    std::cout << "Mapping local entity id : " << e.id().id() << " to distant entity : " << incomingEvent.entityId.id()
+              << std::endl;
+    mDistantToLocalEntitiesIds[incomingEvent.entityId] = e.id();
+    mLocalToDistantEntitiesIds[e.id()] = incomingEvent.entityId;
 }
 void NetworkClientSystem::receive(const sf::Event &event)
 {
@@ -89,54 +123,75 @@ void NetworkClientSystem::receive(const sf::Event &event)
         mDying = true;
     }
 }
+void NetworkClientSystem::sendEventToServer(const NetworkEvent &event)
+{
+    sf::Packet packet = Tools::preparePacket(mServerIp, mServerPort);
+    packet << event;
+    sf::Socket::Status status = mSocket.send(packet, mServerIp, mServerPort);
+
+    if (status != sf::Socket::Status::Done)
+    {
+        std::cout << "WARNING : cannot send packet... " << std::endl;
+    }
+}
+void NetworkClientSystem::sendActions(const std::map<Actionable::Action, bool> &actions)
+{
+    NetworkEvent event;
+    event.type = NetworkEvent::Type::PlayerAction;
+    event.entityId = mLocalToDistantEntitiesIds[mId];
+    event.actions = actions;
+
+    std::cout << "Sending Actions : " << Tools::actionsToBitset(actions).to_string()
+              << " Entity ID : " << event.entityId.id() << std::endl;
+
+    sendEventToServer(event);
+}
+void NetworkClientSystem::sendKeyReleased(entityx::Entity::Id id, const sf::Keyboard::Key &key)
+{
+    NetworkEvent event;
+    event.type = NetworkEvent::Type::KeyReleased;
+    event.keyCode = key;
+
+    sendEventToServer(event);
+}
+void NetworkClientSystem::sendKeyPressed(entityx::Entity::Id id, const sf::Keyboard::Key &key)
+{
+    NetworkEvent event;
+    event.type = NetworkEvent::Type::KeyPressed;
+    event.keyCode = key;
+
+    sendEventToServer(event);
+}
 void NetworkClientSystem::sendHeartBeat()
 {
-    sf::Packet packet;
-    sf::IpAddress server = {"127.0.0.1"};
-    unsigned short port = 3121;
     NetworkEvent event;
-
     event.type = NetworkEvent::Type::Message;
     event.message = "Hi !";
 
-    packet << event;
-
-    sf::Socket::Status status = mSocket.send(packet, server, port);
+    sendEventToServer(event);
 }
 void NetworkClientSystem::sendDisconnection(entityx::Entity::Id id)
 {
-    sf::Packet packet;
-    sf::IpAddress server = {"127.0.0.1"};
-    unsigned short port = 3121;
     NetworkEvent event;
-
     event.type = NetworkEvent::Type::Disconnect;
     event.entityId = id;
 
     std::cout << "Sending disconnect : " << event.entityId.id() << std::endl;
 
-    packet << event;
-
-    sf::Socket::Status status = mSocket.send(packet, server, port);
+    sendEventToServer(event);
 
     mStatus = Disconnected;
 }
 void NetworkClientSystem::sendConnection()
 {
-    sf::Packet packet;
-    sf::IpAddress server = {"127.0.0.1"};
-    unsigned short port = 3121;
     NetworkEvent event;
+    event.type = NetworkEvent::Type::Connect;
     event.clientUuid = Tools::uuidFromTimestamp();
     mUuid = event.clientUuid;
 
     std::cout << "Sending connection with uuid : " << mUuid << std::endl;
 
-    event.type = NetworkEvent::Type::Connect;
-
-    packet << event;
-
-    sf::Socket::Status status = mSocket.send(packet, server, port);
+    sendEventToServer(event);
 
     mStatus = Pending;
 }

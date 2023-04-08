@@ -15,25 +15,46 @@ void NetworkServerSystem::configure(entityx::EventManager &event_manager)
 
 void NetworkServerSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-    if (mSelector.wait())
+    auto fdt = static_cast<float>(dt);
+    mCumulDeltaT += fdt;
+
+    sf::Packet packet;
+    sf::IpAddress sender;
+    unsigned short port;
+
+    sf::Socket::Status status = mSocket.receive(packet, sender, port);
+
+    if (status == sf::Socket::Status::Done)
     {
-        if (mSelector.isReady(mSocket))
-        {
-            sf::Packet packet;
-            sf::IpAddress sender;
-            unsigned short port;
-
-            sf::Socket::Status status = mSocket.receive(packet, sender, port);
-
-            if (status == sf::Socket::Status::Done)
-            {
-                handlePacket(es, packet, sender, port);
-            }
-        }
+        handlePacket(es, packet, sender, port);
     }
-    else
+
+    // std::cout << "Last broadcast : " << mLastRun << " Cumul Delta : " << mCumulDeltaT << std::endl;
+    if (mCumulDeltaT - mLastRun > 100000)
     {
-        std::cout << "Nowait" << std::endl;
+        mLastRun = mCumulDeltaT;
+
+        broadcastEntityPositions(es);
+    }
+}
+void NetworkServerSystem::broadcastEntityPositions(entityx::EntityManager &es)
+{
+    for (auto it = mLocalEntitiesToDistantIps.begin(); it != mLocalEntitiesToDistantIps.end(); ++it)
+    {
+        auto toAdressPort = it->second;
+
+        es.each<Renderable>([&](entityx::Entity entity, Renderable &renderable) {
+            sf::Packet packetOut;
+
+            NetworkEvent eventOut;
+            eventOut.entityId = entity.id();
+            eventOut.type = NetworkEvent::Type::EntityPosition;
+            eventOut.entityPosition = renderable.mPos;
+
+            packetOut << eventOut;
+
+            sf::Socket::Status status = mSocket.send(packetOut, std::get<1>(toAdressPort), std::get<2>(toAdressPort));
+        });
     }
 }
 void NetworkServerSystem::handlePacket(entityx::EntityManager &es, sf::Packet &packet, sf::IpAddress &adress,
@@ -53,9 +74,44 @@ void NetworkServerSystem::handlePacket(entityx::EntityManager &es, sf::Packet &p
     case NetworkEvent::Type::Message:
         handleMessage(es, packet, event, adress, port);
         break;
+    case NetworkEvent::Type::KeyPressed:
+        handleKeyPressed(es, packet, event, adress, port);
+        break;
+    case NetworkEvent::Type::KeyReleased:
+        handleKeyReleased(es, packet, event, adress, port);
+        break;
+    case NetworkEvent::Type::PlayerAction:
+        handlePlayerAction(es, packet, event, adress, port);
+        break;
     default:
         handleDefault(es, packet, event, adress, port);
     }
+}
+void NetworkServerSystem::handlePlayerAction(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
+                                             sf::IpAddress &senderAdress, unsigned short senderPort)
+{
+    std::cout << "PlayerActionReceived Entity ID " << event.entityId.id()
+              << " bitset : " << Tools::actionsToBitset(event.actions).to_string() << " from : " << senderAdress
+              << " on port : " << senderPort << std::endl;
+    es.each<Actionable, Renderable, Movable>(
+        [&](entityx::Entity entity, Actionable &actionable, Renderable &renderable, Movable &movable) {
+            if (event.entityId.id() == entity.id().id())
+            {
+                actionable.actions = event.actions;
+            }
+        });
+}
+void NetworkServerSystem::handleKeyPressed(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
+                                           sf::IpAddress &senderAdress, unsigned short senderPort)
+{
+    std::cout << "KeyPressedReceived " << event.keyCode << " from : " << senderAdress << " on port : " << senderPort
+              << std::endl;
+}
+void NetworkServerSystem::handleKeyReleased(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
+                                            sf::IpAddress &senderAdress, unsigned short senderPort)
+{
+    std::cout << "KeyReleasedReceived " << event.keyCode << " from : " << senderAdress << " on port : " << senderPort
+              << std::endl;
 }
 void NetworkServerSystem::handleConnect(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
                                         sf::IpAddress &senderAdress, unsigned short senderPort)
@@ -69,6 +125,7 @@ void NetworkServerSystem::handleConnect(entityx::EntityManager &es, sf::Packet &
     e.assign<Playable>("Roger");
     e.assign<Renderable>(sf::Vector2f(128.f, 128.f));
     e.assign<Movable>(sf::Vector2f(0.f, 0.f));
+    e.assign<Actionable>();
 
     broadcastEntityCreation(e);
 

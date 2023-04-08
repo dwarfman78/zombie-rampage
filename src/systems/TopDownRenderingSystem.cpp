@@ -27,7 +27,7 @@ void TopDownRenderingSystem::update(entityx::EntityManager &es, entityx::EventMa
 void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
 {
     // Pour chaque Joueur...
-    es.each<Playable, Renderable>([&](entityx::Entity entity, Playable &playable, Renderable &renderable) {
+    es.each<Renderable>([&](entityx::Entity entity, Renderable &renderable) {
         // Constitution du vecteur de points du joueur et affichage.
         sf::VertexArray quad(sf::TriangleStrip, 4);
         quad[0].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
