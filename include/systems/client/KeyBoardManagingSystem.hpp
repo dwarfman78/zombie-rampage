@@ -1,9 +1,9 @@
 #ifndef ZR_KeyBoardManagingSystem_HPP
 #define ZR_KeyBoardManagingSystem_hpp
-#include "../Common.hpp"
-#include "../components/Actionable.hpp"
-#include "../components/Events.hpp"
-#include "../components/Playable.hpp"
+#include "../../Common.hpp"
+#include "../../components/Actionable.hpp"
+#include "../../components/Events.hpp"
+#include "../../components/Playable.hpp"
 class KeyBoardManagingSystem : public entityx::System<KeyBoardManagingSystem>,
                                public entityx::Receiver<KeyBoardManagingSystem>
 {

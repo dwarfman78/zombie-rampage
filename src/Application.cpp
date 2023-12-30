@@ -10,7 +10,7 @@ Application::Application(int argc, char **arguments)
     std::string lastArg;
     if (argc > 1)
     {
-        lastArg = {arguments[argc - 1]};
+        lastArg = arguments[argc - 1];
     }
     else
     {
@@ -20,9 +20,11 @@ Application::Application(int argc, char **arguments)
     // System order is important !
     if (lastArg == "--debug")
     {
+        mDebug = true;
         systems.add<DebugSystem, sf::RenderTarget &>(mWindow);
     }
     systems.add<TopDownRenderingSystem, sf::RenderTarget &>(mWindow);
+    systems.add<InterpolationSystem>();
     systems.add<MovingSystem>();
     systems.add<KeyBoardManagingSystem>(mWindow);
     systems.add<MouseManagingSystem>(mWindow);
@@ -41,11 +43,8 @@ void Application::start()
 
     sf::Clock deltaClock;
     sf::Int32 acc = 0;
-    sf::Int32 tickRate = 64;
-    sf::Int32 wSize = 1000000 / tickRate;
-    sf::Int32 graphicLoops = 0;
-    sf::Int32 logicLoops = 0;
-    while (mWindow.isOpen())
+
+  while (mWindow.isOpen())
     {
         sf::Time dt = deltaClock.restart();
         acc += dt.asMicroseconds();
@@ -60,20 +59,23 @@ void Application::start()
         mWindow.clear();
         systems.update<TopDownRenderingSystem>(dt.asMilliseconds());
 
-        // std::cout << "Updating graphics" << graphicLoops << std::endl;
-        graphicLoops++;
-        if (acc >= (wSize))
+        if (acc >= (WINDOW_SIZE))
         {
-            // std::cout << "Updating logic" << logicLoops << std::endl;
-            logicLoops++;
-            systems.update<MovingSystem>(acc / 1000);
-            systems.update<CollisionSystem>(acc / 1000);
-            acc = -(acc - wSize);
+            std::cout << "Tick " << acc << std::endl;
+            systems.update<InterpolationSystem>(acc / 1000.f);
+            systems.update<MovingSystem>(acc / 1000.f);
+            systems.update<CollisionSystem>(acc / 1000.f);
+            acc = (acc - WINDOW_SIZE);
         }
 
         systems.update<KeyBoardManagingSystem>(dt.asMilliseconds());
         systems.update<MouseManagingSystem>(dt.asMilliseconds());
         systems.update<NetworkClientSystem>(dt.asMilliseconds());
+
+        if (mDebug)
+        {
+            systems.update<DebugSystem>(dt.asMilliseconds());
+        }
 
         mWindow.display();
     }

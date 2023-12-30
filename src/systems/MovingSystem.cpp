@@ -6,14 +6,38 @@ void MovingSystem::configure(entityx::EventManager &event_manager)
 }
 void MovingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-    es.each<Movable, Renderable, Actionable>(
-        [&](entityx::Entity entity, Movable &movable, Renderable &renderable, Actionable &actionable) {
-            handleMovingActions(actionable, movable);
-            handleCollisionEvents(entity, movable, renderable);
+    es.each<Movable, Renderable, Actionable, Networkable>([&](entityx::Entity entity, Movable &movable,
+                                                              Renderable &renderable, Actionable &actionable,
+                                                              Networkable &networkable) {
+        float deltaTimeFinal = static_cast<float>(dt);
 
-            renderable.mPos += (movable.mAcceleration * static_cast<float>(dt)) / 1000.f;
-            renderable.mRect = {renderable.mPos, {32, 32}};
-        });
+        if (mIsServer)
+        {
+            if (networkable.isDesync)
+            {
+                if (actionable.isRunning())
+                {
+                    std::cout << "Adjusting dt late by plus " << networkable.clientServerDelay << std::endl;
+                    deltaTimeFinal += networkable.clientServerDelay;
+                }
+                else
+                {
+                    std::cout << "Adjusting dt advance by minus " << networkable.clientServerDelay << std::endl;
+                    deltaTimeFinal -= networkable.clientServerDelay;
+                }
+                networkable.isDesync = false;
+            }
+        }
+        if (entity.has_component<Playable>())
+        {
+            handleMovingActions(actionable, movable);
+        }
+
+        handleCollisionEvents(entity, movable, renderable);
+
+        renderable.mPos += (movable.mAcceleration * deltaTimeFinal) / 1000.f;
+        renderable.mRect = {renderable.mPos, {32, 32}};
+    });
 }
 void MovingSystem::handleCollisionEvents(entityx::Entity &entity, Movable &movable, Renderable &renderable)
 {
@@ -178,5 +202,4 @@ void MovingSystem::receive(const CollisionEvent &event)
 }
 void MovingSystem::receive(const NetworkEvent &event)
 {
-    mNetworkPositionEvents[event.entityId] = {event.entityPosition};
 }

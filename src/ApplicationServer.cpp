@@ -7,7 +7,7 @@ ApplicationServer::ApplicationServer(int argc, char **arguments)
 }
 void ApplicationServer::start()
 {
-    systems.add<MovingSystem>();
+    systems.add<MovingSystem>(true);
     systems.add<CollisionSystem>();
     systems.add<NetworkServerSystem>();
     systems.configure();
@@ -19,20 +19,27 @@ void ApplicationServer::start()
 
     sf::Clock deltaClock;
     sf::Int32 acc = 0;
-    sf::Int32 tickRate = 64;
-    sf::Int32 wSize = 1000000 / tickRate;
-    while (true)
+    bool runServer = true;
+    while (runServer)
     {
         sf::Time dt = deltaClock.restart();
-        acc += dt.asMicroseconds();
-
-        if (acc >= (wSize))
+        if (dt.asMicroseconds() == 0)
         {
-            systems.update<MovingSystem>(acc / 1000);
-            systems.update<CollisionSystem>(acc / 1000);
-            acc = -(acc - wSize);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        else
+        {
+            acc += dt.asMicroseconds();
         }
 
-        systems.update<NetworkServerSystem>(dt.asMicroseconds());
+        if (acc >= (WINDOW_SIZE))
+        {
+            std::cout << "Tick " << acc << std::endl;
+            systems.update<MovingSystem>(acc / 1000.f);
+            systems.update<CollisionSystem>(acc / 1000.f);
+            acc = (acc - WINDOW_SIZE);
+        }
+
+        systems.update<NetworkServerSystem>(dt.asMilliseconds());
     }
 }

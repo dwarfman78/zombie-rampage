@@ -1,24 +1,31 @@
 #include "../include/Application.hpp"
 #include "../include/ApplicationServer.hpp"
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 
-  std::string mode;
-  if (argc > 1) {
-    mode = {argv[1]};
-  } else {
-    mode = "";
-  }
+    std::string mode;
+    if (argc > 1)
+    {
+        mode = argv[1];
+    }
+    else
+    {
+        mode = "";
+    }
 
-  if (mode == "--server") {
-    ApplicationServer applicationServer(argc, argv);
+    if (mode == "--server")
+    {
+        ApplicationServer applicationServer(argc, argv);
 
-    applicationServer.start();
+        applicationServer.start();
+    }
+    else
+    {
 
-  } else {
-    Application application(argc, argv);
+        Application application(argc, argv);
 
-    application.start();
-  }
-  return EXIT_SUCCESS;
+        application.start();
+    }
+    return EXIT_SUCCESS;
 }

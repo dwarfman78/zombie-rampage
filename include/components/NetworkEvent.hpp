@@ -2,20 +2,27 @@
 #define ZR_NETWORKEVENT_HPP
 #include "../Common.hpp"
 #include "../Tools.hpp"
+#include "../components/Movable.hpp"
+#include "../components/Networkable.hpp"
+#include "../components/Renderable.hpp"
 struct NetworkEvent
 {
     enum Type
     {
         Connect,
         Disconnect,
-        EntityPosition,
+        WorldState,
         EntityCreation,
         EntitySuppression,
         KeyPressed,
         KeyReleased,
         PlayerAction,
-        Message
+        Message,
+        Ping
     };
+    NetworkEvent() : currentTimestamp(Tools::currentTimestamp())
+    {
+    }
     /**
      * @brief Prepare a packet to send from an Event.
      *
@@ -28,38 +35,35 @@ struct NetworkEvent
         switch (event.type)
         {
         case Connect:
-            return packet << static_cast<int32_t>(event.type) << event.clientUuid;
+            return sendCommon(packet, event) << event.clientUuid;
             break;
         case Disconnect:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id();
+            return sendCommon(packet, event) << event.serverEntityId.id();
             break;
         case Message:
-            return packet << static_cast<int32_t>(event.type) << event.message;
+            return sendCommon(packet, event) << event.message;
             break;
-        case EntityPosition:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id() << event.entityPosition.x
-                          << event.entityPosition.y;
+        case WorldState:
+            return sendWorldState(packet, event);
             break;
         case EntityCreation:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id() << event.clientUuid
-                          << event.entityPosition.x << event.entityPosition.y;
+            return sendCommon(packet, event)
+                   << event.serverEntityId.id() << event.clientUuid << event.entityPosition.x << event.entityPosition.y;
             break;
         case EntitySuppression:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id();
+            return sendCommon(packet, event) << event.serverEntityId.id();
             break;
         case KeyPressed:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
-                          << static_cast<int32_t>(event.keyCode);
+            return sendCommon(packet, event) << event.serverEntityId.id() << static_cast<int32_t>(event.keyCode);
         case KeyReleased:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
-                          << static_cast<int32_t>(event.keyCode);
+            return sendCommon(packet, event) << event.serverEntityId.id() << static_cast<int32_t>(event.keyCode);
             break;
         case PlayerAction:
-            return packet << static_cast<int32_t>(event.type) << event.entityId.id()
-                          << Tools::actionsToBitset(event.actions).to_string();
+            return sendCommon(packet, event)
+                   << event.serverEntityId.id() << Tools::actionsToBitset(event.actions).to_string();
             break;
         default:
-            return packet << static_cast<int32_t>(event.type);
+            return sendCommon(packet, event);
         }
     }
 
@@ -75,6 +79,10 @@ struct NetworkEvent
         int32_t receive;
         packet >> receive;
         event.type = static_cast<NetworkEvent::Type>(receive);
+
+        int64_t currentTimestamp;
+        packet >> currentTimestamp;
+        event.currentTimestamp = currentTimestamp;
 
         switch (event.type)
         {
@@ -102,11 +110,9 @@ struct NetworkEvent
             receiveEntityActions(packet, event);
         }
         break;
-        case EntityPosition: {
+        case WorldState: {
 
-            receiveEntityId(packet, event);
-
-            packet >> event.entityPosition.x >> event.entityPosition.y;
+            receiveWorldState(packet, event);
         }
         break;
         case EntityCreation: {
@@ -135,7 +141,7 @@ struct NetworkEvent
         int64_t id;
         packet >> id;
         entityx::Entity::Id receivedId(id);
-        event.entityId = receivedId;
+        event.serverEntityId = receivedId;
     }
 
     static void receiveEntityActions(sf::Packet &packet, NetworkEvent &event)
@@ -150,12 +156,71 @@ struct NetworkEvent
         }
     }
 
+    static sf::Packet &sendCommon(sf::Packet &packet, const NetworkEvent &event)
+    {
+        packet << static_cast<int32_t>(event.type) << event.currentTimestamp;
+
+        return packet;
+    }
+
+    static sf::Packet &sendWorldState(sf::Packet &packet, const NetworkEvent &event)
+    {
+        sendCommon(packet, event) << event.serverTick << event.worldState.size();
+
+        for (auto it = event.worldState.begin(); it != event.worldState.end(); ++it)
+        {
+            auto tupleWorld = it->second;
+            packet << (it->first).id();
+            packet << std::get<0>(tupleWorld).mPos.x << std::get<0>(tupleWorld).mPos.y
+                   << std::get<1>(tupleWorld).mAcceleration.x << std::get<1>(tupleWorld).mAcceleration.y;
+        }
+        return packet;
+    }
+
+    static void receiveWorldState(sf::Packet &packet, NetworkEvent &event)
+    {
+        size_t entitySize;
+        unsigned int serverTick;
+
+        packet >> serverTick;
+
+        event.serverTick = serverTick;
+
+        packet >> entitySize;
+
+        for (auto i = 0; i < entitySize; ++i)
+        {
+            int64_t id;
+            packet >> id;
+            entityx::Entity::Id receivedId(id);
+
+            sf::Vector2f entityPos, entityAcc;
+
+            packet >> entityPos.x >> entityPos.y;
+            packet >> entityAcc.x >> entityAcc.y;
+
+            Renderable renderable(entityPos);
+
+            Movable movable(entityAcc);
+
+            Networkable networkable;
+            networkable.distantId = receivedId;
+
+            event.worldState[receivedId] = {renderable, movable, networkable};
+        }
+    }
+
     std::string message;
     std::string clientUuid;
     sf::Vector2f entityPosition;
-    entityx::Entity::Id entityId;
+    std::map<entityx::Entity::Id, std::tuple<Renderable, Movable, Networkable>> worldState;
+    entityx::Entity::Id serverEntityId;
+    entityx::Entity::Id clientEntityId;
     sf::Keyboard::Key keyCode;
     std::map<Actionable::Action, bool> actions;
     Type type;
+    int64_t currentTimestamp{0};
+    int64_t latency{0};
+    unsigned int serverTick{0};
 };
 #endif

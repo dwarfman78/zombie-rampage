@@ -1,12 +1,14 @@
 #ifndef ZR_TOPDOWNRENDERINGSYSTEM_HPP
 #define ZR_TOPDOWNRENDERINGSYSTEM_HPP
 
-#include "../../include/components/Movable.hpp"
-#include "../../include/components/Playable.hpp"
-#include "../../include/components/Renderable.hpp"
-#include "../../include/components/TileMap.hpp"
-#include "../Common.hpp"
-#include "RenderingSystem.hpp"
+#include "../../../include/components/Movable.hpp"
+#include "../../../include/components/Playable.hpp"
+#include "../../../include/components/Renderable.hpp"
+#include "../../../include/components/TileMap.hpp"
+#include "../../Common.hpp"
+#include "../../assets/player.png.hpp"
+#include "../../assets/tile.png.hpp"
+#include "../client/RenderingSystem.hpp"
 /**
  * @brief System de rendu en vue du dessus (top down)
  *

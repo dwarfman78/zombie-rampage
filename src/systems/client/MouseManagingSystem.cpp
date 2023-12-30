@@ -1,4 +1,4 @@
-#include "../../include/systems/MouseManagingSystem.hpp"
+#include "../../../include/systems/client/MouseManagingSystem.hpp"
 
 void MouseManagingSystem::configure(entityx::EventManager &event_manager)
 {

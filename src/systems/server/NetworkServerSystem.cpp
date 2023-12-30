@@ -1,4 +1,4 @@
-#include "../../include/systems/NetworkServerSystem.hpp"
+#include "../../../include/systems/server/NetworkServerSystem.hpp"
 
 void NetworkServerSystem::configure(entityx::EventManager &event_manager)
 {
@@ -30,38 +30,49 @@ void NetworkServerSystem::update(entityx::EntityManager &es, entityx::EventManag
     }
 
     // std::cout << "Last broadcast : " << mLastRun << " Cumul Delta : " << mCumulDeltaT << std::endl;
-    if (mCumulDeltaT - mLastRun > 100000)
+    //  100000
+    if (mCumulDeltaT - mLastRun > 1000)
     {
         mLastRun = mCumulDeltaT;
 
-        broadcastEntityPositions(es);
+        broadcastWorldState(es);
     }
+    mServerTickNumber++;
 }
-void NetworkServerSystem::broadcastEntityPositions(entityx::EntityManager &es)
+void NetworkServerSystem::broadcastWorldState(entityx::EntityManager &es)
 {
+    NetworkEvent eventOut;
+
+    prepareWorldStateEvent(es, eventOut);
+
     for (auto it = mLocalEntitiesToDistantIps.begin(); it != mLocalEntitiesToDistantIps.end(); ++it)
     {
         auto toAdressPort = it->second;
 
-        es.each<Renderable>([&](entityx::Entity entity, Renderable &renderable) {
+        es.each<Renderable, Movable>([&](entityx::Entity entity, Renderable &renderable, Movable &movable) {
             sf::Packet packetOut;
-
-            NetworkEvent eventOut;
-            eventOut.entityId = entity.id();
-            eventOut.type = NetworkEvent::Type::EntityPosition;
-            eventOut.entityPosition = renderable.mPos;
-
             packetOut << eventOut;
 
             sf::Socket::Status status = mSocket.send(packetOut, std::get<1>(toAdressPort), std::get<2>(toAdressPort));
         });
     }
 }
+void NetworkServerSystem::prepareWorldStateEvent(entityx::EntityManager &es, NetworkEvent &eventOut)
+{
+    eventOut.serverTick = mServerTickNumber;
+    eventOut.type = NetworkEvent::Type::WorldState;
+    es.each<Renderable, Movable, Networkable>(
+        [&](entityx::Entity entity, Renderable &renderable, Movable &movable, Networkable &networkable) {
+            eventOut.worldState[entity.id()] = {renderable.mPos, movable.mAcceleration, networkable};
+        });
+}
 void NetworkServerSystem::handlePacket(entityx::EntityManager &es, sf::Packet &packet, sf::IpAddress &adress,
                                        unsigned short port)
 {
     NetworkEvent event;
     packet >> event;
+
+    event.latency = Tools::currentTimestamp() - event.currentTimestamp;
 
     switch (event.type)
     {
@@ -83,23 +94,34 @@ void NetworkServerSystem::handlePacket(entityx::EntityManager &es, sf::Packet &p
     case NetworkEvent::Type::PlayerAction:
         handlePlayerAction(es, packet, event, adress, port);
         break;
+    case NetworkEvent::Type::Ping:
+        handlePing(es, packet, event, adress, port);
+        break;
     default:
         handleDefault(es, packet, event, adress, port);
     }
 }
+void NetworkServerSystem::handlePing(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
+                                     sf::IpAddress &senderAdress, unsigned short senderPort)
+{
+}
 void NetworkServerSystem::handlePlayerAction(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
                                              sf::IpAddress &senderAdress, unsigned short senderPort)
 {
-    std::cout << "PlayerActionReceived Entity ID " << event.entityId.id()
+    std::cout << "PlayerActionReceived Entity ID " << event.serverEntityId.id()
               << " bitset : " << Tools::actionsToBitset(event.actions).to_string() << " from : " << senderAdress
-              << " on port : " << senderPort << std::endl;
-    es.each<Actionable, Renderable, Movable>(
-        [&](entityx::Entity entity, Actionable &actionable, Renderable &renderable, Movable &movable) {
-            if (event.entityId.id() == entity.id().id())
-            {
-                actionable.actions = event.actions;
-            }
-        });
+              << " on port : " << senderPort << " Latency : " << event.latency << std::endl;
+
+    auto entity = es.get(event.serverEntityId);
+    if (entity.valid())
+    {
+        auto actionable = es.component<Actionable>(event.serverEntityId);
+        auto networkable = es.component<Networkable>(event.serverEntityId);
+
+        networkable->clientServerDelay = event.latency;
+        actionable->actions = event.actions;
+        networkable->isDesync = true;
+    }
 }
 void NetworkServerSystem::handleKeyPressed(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
                                            sf::IpAddress &senderAdress, unsigned short senderPort)
@@ -126,6 +148,7 @@ void NetworkServerSystem::handleConnect(entityx::EntityManager &es, sf::Packet &
     e.assign<Renderable>(sf::Vector2f(128.f, 128.f));
     e.assign<Movable>(sf::Vector2f(0.f, 0.f));
     e.assign<Actionable>();
+    e.assign<Networkable>();
 
     broadcastEntityCreation(e);
 
@@ -145,7 +168,7 @@ void NetworkServerSystem::sendAllEntities(entityx::EntityManager &es,
 
         eventOut.type = NetworkEvent::Type::EntityCreation;
         eventOut.entityPosition = renderable.mPos;
-        eventOut.entityId = entity.id();
+        eventOut.serverEntityId = entity.id();
         eventOut.clientUuid = std::get<0>(mLocalEntitiesToDistantIps[entity.id()]);
         packetOut << eventOut;
 
@@ -163,7 +186,7 @@ void NetworkServerSystem::broadcastEntityCreation(entityx::Entity &e)
 
         eventOut.type = NetworkEvent::Type::EntityCreation;
         eventOut.entityPosition = renderableComponent->mPos;
-        eventOut.entityId = e.id();
+        eventOut.serverEntityId = e.id();
         eventOut.clientUuid = "";
         packetOut << eventOut;
 
@@ -179,7 +202,7 @@ void NetworkServerSystem::broadcastEntitySuppression(const entityx::Entity::Id &
         auto toAdressPort = it->second;
 
         eventOut.type = NetworkEvent::Type::EntitySuppression;
-        eventOut.entityId = entityId;
+        eventOut.serverEntityId = entityId;
         eventOut.clientUuid = "";
         packetOut << eventOut;
 
@@ -190,11 +213,11 @@ void NetworkServerSystem::handleDisconnect(entityx::EntityManager &es, sf::Packe
                                            sf::IpAddress &senderAdress, unsigned short senderPort)
 {
     std::cout << "Disconnection from : " << senderAdress << " on port : " << senderPort
-              << " Destroying entity : " << event.entityId.id() << std::endl;
+              << " Destroying entity : " << event.serverEntityId.id() << std::endl;
 
-    mLocalEntitiesToDistantIps.erase(event.entityId);
-    broadcastEntitySuppression(event.entityId);
-    es.destroy(event.entityId);
+    mLocalEntitiesToDistantIps.erase(event.serverEntityId);
+    broadcastEntitySuppression(event.serverEntityId);
+    es.destroy(event.serverEntityId);
 }
 void NetworkServerSystem::handleMessage(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
                                         sf::IpAddress &senderAdress, unsigned short senderPort)

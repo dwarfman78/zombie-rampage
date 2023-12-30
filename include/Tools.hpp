@@ -6,6 +6,18 @@ class Tools
 {
   public:
     static const int TILE_SIZE = 32;
+    static void drawText(const std::string &text, unsigned int size, const sf::Vector2f &where,
+                         sf::RenderTarget &target)
+    {
+        sf::Font font;
+        if (font.loadFromMemory(fontArmyData, fontArmyDataSize))
+        {
+            sf::Text textDrawn(text, font);
+            textDrawn.setPosition(where);
+            textDrawn.setCharacterSize(size);
+            target.draw(textDrawn);
+        }
+    }
     static bool segmentIntersects(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
     {
         float tn = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
@@ -53,6 +65,13 @@ class Tools
             rank++;
         }
         return binaryRepresentation;
+    }
+    static int64_t currentTimestamp()
+    {
+        // Obtenir le timestamp courant en millisecondes depuis l'époque (1er janvier 1970)
+        auto currentTime = std::chrono::system_clock::now();
+        auto currentTimeMicro = std::chrono::time_point_cast<std::chrono::milliseconds>(currentTime);
+        return currentTimeMicro.time_since_epoch().count();
     }
     static std::string uuidFromTimestamp()
     {

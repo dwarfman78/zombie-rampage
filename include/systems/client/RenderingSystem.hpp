@@ -1,6 +1,6 @@
 #ifndef ZR_RENDERINGSYSTEM_HPP
 #define ZR_RENDERINGSYSTEM_HPP
-#include "../Common.hpp"
+#include "../../Common.hpp"
 
 /**
  * @brief System abstrait permettant d'effectuer un rendu sur cible.

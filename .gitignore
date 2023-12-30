@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+
+build/
+extlibs/
+
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+zombie-rampage
+
+.vscode
+.cache

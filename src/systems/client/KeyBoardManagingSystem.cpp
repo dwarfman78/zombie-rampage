@@ -1,4 +1,4 @@
-#include "../../include/systems/KeyBoardManagingSystem.hpp"
+#include "../../../include/systems/client/KeyBoardManagingSystem.hpp"
 void KeyBoardManagingSystem::configure(entityx::EventManager &event_manager)
 {
     event_manager.subscribe<sf::Event>(*this);

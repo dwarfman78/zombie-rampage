@@ -4,11 +4,22 @@ void DebugSystem::configure(entityx::EventManager &event_manager)
 {
     event_manager.subscribe<CollisionEvent>(*this);
     event_manager.subscribe<MouseEvent>(*this);
+    event_manager.subscribe<NetworkEvent>(*this);
+    event_manager.subscribe<InterpolationEvent>(*this);
+
+    if (!mDebugFont.loadFromMemory(fontArmyData, fontArmyDataSize))
+    {
+        std::cout << "Cannot load font from memory !" << std::endl;
+    }
+}
+void DebugSystem::drawPanel(entityx::TimeDelta dt)
+{
+    Tools::drawText(std::to_string((int)dt), 20, {0.f, 0.f}, mTarget);
 }
 void DebugSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-    es.each<Playable, Renderable, Movable>(
-        [&](entityx::Entity entity, Playable &playable, Renderable &renderable, Movable &movable) {
+    es.each<Actionable, Renderable, Movable>(
+        [&](entityx::Entity entity, Actionable &actionable, Renderable &renderable, Movable &movable) {
             sf::FloatRect topLeftRect, topRightRect, bottomLeftRect, bottomRightRect;
             sf::FloatRect playerRect = renderable.mRect;
 
@@ -39,6 +50,9 @@ void DebugSystem::update(entityx::EntityManager &es, entityx::EventManager &even
             {
                 drawRectOutlined(mCe.mIntersect, sf::Color::Red, mCe.mIntersect.height, mCe.mIntersect.width);
             }
+
+            debugWorldState(mLastNe);
+            drawPanel(dt);
         }
 
     );
@@ -85,4 +99,67 @@ void DebugSystem::receive(const MouseEvent &event)
 {
     MouseEvent me(event);
     mMouseEvent = me;
+}
+void DebugSystem::receive(const NetworkEvent &event)
+{
+    switch (event.type)
+    {
+    case NetworkEvent::Type::EntityCreation:
+
+        break;
+    case NetworkEvent::Type::EntitySuppression:
+
+        break;
+    case NetworkEvent::Type::WorldState:
+        mLastNe = event;
+
+        mWorldStateBuffer.push(event.worldState);
+
+    default:;
+        break;
+    }
+}
+void DebugSystem::receive(const InterpolationEvent &event)
+{
+    mLastWorldState = event.currentWorldState;
+}
+void DebugSystem::debugWorldState(const NetworkEvent &event)
+{
+    /*auto copyQueue = mWorldStateBuffer;
+    while (!copyQueue.empty())
+    {
+        auto worldState = copyQueue.front();
+
+        for (auto it = worldState.begin(); it != worldState.end(); ++it)
+        {
+            sf::FloatRect rect = {std::get<0>(it->second).mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
+            drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
+            drawVector(std::get<1>(it->second).mAcceleration, rect.getPosition(), sf::Color::Cyan);
+        }
+
+        copyQueue.pop();
+    }*/
+
+    /*auto copyQueue = mWorldStateBuffer;
+    auto worldState = copyQueue.front();
+
+    for (auto &[entityId, state] : worldState)
+    {
+        auto &[stateRenderable, stateMovable, stateNetworkable] = state;
+
+        sf::FloatRect rect = {stateRenderable.mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
+        drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
+        drawVector(stateMovable.mAcceleration, rect.getPosition(), sf::Color::Cyan);
+    }*/
+
+    for (auto &[entityId, state] : mLastWorldState)
+    {
+        auto &[stateRenderable, stateMovable, stateNetworkable] = state;
+
+        sf::FloatRect rect = {stateRenderable.mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
+        drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
+        drawVector(stateMovable.mAcceleration, rect.getPosition(), sf::Color::Cyan);
+        Tools::drawText(std::to_string(stateNetworkable.localId.id()) + "/" + std::to_string(stateNetworkable.distantId.id()), 15, rect.getPosition(),
+                        mTarget);
+    }
 }

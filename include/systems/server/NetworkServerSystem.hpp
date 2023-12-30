@@ -1,11 +1,12 @@
 #ifndef ZR_NETWORKSERVERSYSTEM_HPP
 #define ZR_NETWORKSERVERSYSTEM_HPP
-#include "../Common.hpp"
-#include "../components/Actionable.hpp"
-#include "../components/Movable.hpp"
-#include "../components/NetworkEvent.hpp"
-#include "../components/Playable.hpp"
-#include "../components/Renderable.hpp"
+#include "../../Common.hpp"
+#include "../../components/Actionable.hpp"
+#include "../../components/Movable.hpp"
+#include "../../components/NetworkEvent.hpp"
+#include "../../components/Networkable.hpp"
+#include "../../components/Playable.hpp"
+#include "../../components/Renderable.hpp"
 class NetworkServerSystem : public entityx::System<NetworkServerSystem>
 {
   public:
@@ -19,7 +20,7 @@ class NetworkServerSystem : public entityx::System<NetworkServerSystem>
     void sendAllEntities(entityx::EntityManager &es, const std::tuple<std::string, sf::IpAddress, unsigned short> &to);
     void broadcastEntityCreation(entityx::Entity &e);
     void broadcastEntitySuppression(const entityx::Entity::Id &entityId);
-    void broadcastEntityPositions(entityx::EntityManager &es);
+    void broadcastWorldState(entityx::EntityManager &es);
     void handlePacket(entityx::EntityManager &es, sf::Packet &packet, sf::IpAddress &senderAdress,
                       unsigned short senderPort);
     void handleConnect(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event, sf::IpAddress &senderAdress,
@@ -34,12 +35,16 @@ class NetworkServerSystem : public entityx::System<NetworkServerSystem>
                            sf::IpAddress &senderAdress, unsigned short senderPort);
     void handlePlayerAction(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
                             sf::IpAddress &senderAdress, unsigned short senderPort);
+    void handlePing(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,
+                            sf::IpAddress &senderAdress, unsigned short senderPort);
     void handleDefault(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event, sf::IpAddress &senderAdress,
                        unsigned short senderPort);
+    void prepareWorldStateEvent(entityx::EntityManager &es, NetworkEvent &eventOut);
     sf::UdpSocket mSocket;
     sf::SocketSelector mSelector;
     std::map<entityx::Entity::Id, std::tuple<std::string, sf::IpAddress, unsigned short>> mLocalEntitiesToDistantIps;
     float mCumulDeltaT{0.f};
     float mLastRun{0.f};
+    unsigned int mServerTickNumber{0};
 };
 #endif

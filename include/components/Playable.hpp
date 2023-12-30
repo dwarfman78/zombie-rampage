@@ -7,6 +7,5 @@ struct Playable
     {
     }
     std::string playerName;
-    entityx::Entity::Id serverSideId;
 };
 #endif

@@ -4,30 +4,31 @@
 
 #ifndef ZR_APPLICATION_HPP
 #define ZR_APPLICATION_HPP
-#include "Common.hpp"
+#include "../include/components/Movable.hpp"
 #include "../include/components/Playable.hpp"
 #include "../include/components/Renderable.hpp"
-#include "../include/components/Movable.hpp"
 #include "../include/systems/AllSystems.hpp"
+#include "Common.hpp"
 /**
- * Main class of the program. 
+ * Main class of the program.
  */
-class Application : public entityx::EntityX {
-public:
-
+class Application : public entityx::EntityX
+{
+  public:
     /**
      * Constructor.
      * @param argc Arguments count.
      * @param arguments Program arguments.
      */
-    Application(int argc, char** arguments);
+    Application(int argc, char **arguments);
 
     /**
-     * Starts the application. 
+     * Starts the application.
      */
     void start();
 
-private:
+  private:
     sf::RenderWindow mWindow;
+    bool mDebug{false};
 };
 #endif

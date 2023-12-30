@@ -21,6 +21,12 @@ struct Actionable
 
         actions[Actionable::Action::RUNUP] = false;
     }
+    bool isRunning()
+    {
+
+        return actions[Actionable::Action::RUNLEFT] || actions[Actionable::Action::RUNRIGHT] ||
+               actions[Actionable::Action::RUNDOWN] || actions[Actionable::Action::RUNUP];
+    }
 
     std::map<Action, bool> actions;
 };

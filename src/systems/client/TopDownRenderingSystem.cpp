@@ -1,18 +1,29 @@
-#include "../../include/systems/TopDownRenderingSystem.hpp"
+#include "../../../include/systems/client/TopDownRenderingSystem.hpp"
 void TopDownRenderingSystem::configure(entityx::EventManager &event_manager)
 {
     // Chargement des textures
-    if (mTileTexture.loadFromFile("assets/tile.png"))
+    //    if (mTileTexture.loadFromFile("assets/tile.png"))
+    //    {
+    //        std::cout << "   assets/tile.png loaded" << std::endl;
+    //
+    //        mTileState.texture = &mTileTexture;
+    //    }
+    //
+    //    if (mPlayerTexture.loadFromFile("assets/player.png"))
+    //    {
+    //        std::cout << "   assets/player.png loaded" << std::endl;
+    //
+    //        mPlayerState.texture = &mPlayerTexture;
+    //    }
+    //
+    if (mTileTexture.loadFromMemory(tileTextureData, tileTextureDataSize))
     {
-        std::cout << "   assets/tile.png loaded" << std::endl;
-
+        std::cout << "  Tile texture loaded from memory" << std::endl;
         mTileState.texture = &mTileTexture;
     }
-
-    if (mPlayerTexture.loadFromFile("assets/player.png"))
+    if (mPlayerTexture.loadFromMemory(playerTextureData, playerTextureDataSize))
     {
-        std::cout << "   assets/player.png loaded" << std::endl;
-
+        std::cout << "  Player texture loaded from memory" << std::endl;
         mPlayerState.texture = &mPlayerTexture;
     }
 }
