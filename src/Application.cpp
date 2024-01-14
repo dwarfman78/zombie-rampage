@@ -2,11 +2,11 @@
 // Created by dwarf
 //
 #include "../include/Application.hpp"
+#include <SFML/Window/WindowStyle.hpp>
 Application::Application(int argc, char **arguments)
-    : mWindow(sf::VideoMode(1024, 768), "Zombie Rampage", sf::Style::Default)
+    : mWindow(sf::VideoMode(1920,1080), "Zombie Rampage", sf::Style::Fullscreen)
 {
 
-    // mWindow.setFramerateLimit(100);
     std::string lastArg;
     if (argc > 1)
     {
@@ -44,7 +44,7 @@ void Application::start()
     sf::Clock deltaClock;
     sf::Int32 acc = 0;
 
-  while (mWindow.isOpen())
+    while (mWindow.isOpen())
     {
         sf::Time dt = deltaClock.restart();
         acc += dt.asMicroseconds();
@@ -61,10 +61,9 @@ void Application::start()
 
         if (acc >= (WINDOW_SIZE))
         {
-            std::cout << "Tick " << acc << std::endl;
-            systems.update<InterpolationSystem>(acc / 1000.f);
-            systems.update<MovingSystem>(acc / 1000.f);
-            systems.update<CollisionSystem>(acc / 1000.f);
+            systems.update<InterpolationSystem>(WINDOW_SIZE_MILLI);
+            systems.update<MovingSystem>(WINDOW_SIZE_MILLI);
+            systems.update<CollisionSystem>(WINDOW_SIZE_MILLI);
             acc = (acc - WINDOW_SIZE);
         }
 

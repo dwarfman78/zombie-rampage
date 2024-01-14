@@ -36,7 +36,7 @@ class NetworkClientSystem : public entityx::System<NetworkClientSystem>, public 
     void sendKeyPressed(entityx::Entity::Id id, const sf::Keyboard::Key &key);
     void sendKeyReleased(entityx::Entity::Id id, const sf::Keyboard::Key &key);
     void sendHeartBeat();
-    void sendActions(const Actionable &actionable, const Networkable &networkable);
+    void sendActions(const std::map<Actionable::Action, bool> &actions);
     void sendEventToServer(const NetworkEvent &event);
 
     sf::UdpSocket mSocket;

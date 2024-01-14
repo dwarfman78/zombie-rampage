@@ -10,6 +10,7 @@ void ApplicationServer::start()
     systems.add<MovingSystem>(true);
     systems.add<CollisionSystem>();
     systems.add<NetworkServerSystem>();
+    systems.add<ResyncServerSystem>();
     systems.configure();
 
     entityx::Entity map = entities.create();
@@ -23,21 +24,19 @@ void ApplicationServer::start()
     while (runServer)
     {
         sf::Time dt = deltaClock.restart();
-        if (dt.asMicroseconds() == 0)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        else
-        {
-            acc += dt.asMicroseconds();
-        }
+        acc += dt.asMicroseconds();
 
         if (acc >= (WINDOW_SIZE))
         {
-            std::cout << "Tick " << acc << std::endl;
-            systems.update<MovingSystem>(acc / 1000.f);
-            systems.update<CollisionSystem>(acc / 1000.f);
+            // systems.update<ResyncServerSystem>(accMili);
+            
+      systems.update<MovingSystem>(WINDOW_SIZE_MILLI); 
+      systems.update<CollisionSystem>(WINDOW_SIZE_MILLI);
             acc = (acc - WINDOW_SIZE);
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 
         systems.update<NetworkServerSystem>(dt.asMilliseconds());

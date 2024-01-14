@@ -70,8 +70,8 @@ class Tools
     {
         // Obtenir le timestamp courant en millisecondes depuis l'époque (1er janvier 1970)
         auto currentTime = std::chrono::system_clock::now();
-        auto currentTimeMicro = std::chrono::time_point_cast<std::chrono::milliseconds>(currentTime);
-        return currentTimeMicro.time_since_epoch().count();
+        //        auto currentTimeMicro = std::chrono::time_point_cast<std::chrono::milliseconds>(currentTime);
+        return currentTime.time_since_epoch().count();
     }
     static std::string uuidFromTimestamp()
     {

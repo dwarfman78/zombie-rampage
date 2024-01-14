@@ -29,7 +29,7 @@ class DebugSystem : public RenderingSystem<DebugSystem>, public entityx::Receive
     void drawPanel(entityx::TimeDelta dt);
 
   private:
-    void debugWorldState(const NetworkEvent &event);
+    void debugWorldState(const NetworkEvent &event, entityx::EntityManager(& es));
     NetworkEvent mLastNe;
     WorldState mLastWorldState;
     std::queue<WorldState> mWorldStateBuffer;

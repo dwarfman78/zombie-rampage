@@ -9,33 +9,30 @@ void MovingSystem::update(entityx::EntityManager &es, entityx::EventManager &eve
     es.each<Movable, Renderable, Actionable, Networkable>([&](entityx::Entity entity, Movable &movable,
                                                               Renderable &renderable, Actionable &actionable,
                                                               Networkable &networkable) {
-        float deltaTimeFinal = static_cast<float>(dt);
-
+        std::string iama;
         if (mIsServer)
         {
-            if (networkable.isDesync)
-            {
-                if (actionable.isRunning())
-                {
-                    std::cout << "Adjusting dt late by plus " << networkable.clientServerDelay << std::endl;
-                    deltaTimeFinal += networkable.clientServerDelay;
-                }
-                else
-                {
-                    std::cout << "Adjusting dt advance by minus " << networkable.clientServerDelay << std::endl;
-                    deltaTimeFinal -= networkable.clientServerDelay;
-                }
-                networkable.isDesync = false;
-            }
+            iama = "server";
         }
+        else
+        {
+            iama = "client";
+        }
+        float deltaTimeFinal = static_cast<float>(dt);
+
         if (entity.has_component<Playable>())
         {
             handleMovingActions(actionable, movable);
         }
 
         handleCollisionEvents(entity, movable, renderable);
-
-        renderable.mPos += (movable.mAcceleration * deltaTimeFinal) / 1000.f;
+//        if (movable.mAcceleration.lengthSq() != 0)
+//        {
+//            std::cout << "( " << iama << " )"
+//                      << "DeltaTime : " << deltaTimeFinal << " mPos : " << renderable.mPos.x << "," << renderable.mPos.y
+//                      << "\n mAcc : " << movable.mAcceleration.x << "," << movable.mAcceleration.y << std::endl;
+//        }
+        renderable.mPos += movable.mAcceleration * (deltaTimeFinal / 1000.f);
         renderable.mRect = {renderable.mPos, {32, 32}};
     });
 }

@@ -1,4 +1,5 @@
 #include "../../../include/systems/client/NetworkClientSystem.hpp"
+#include <entityx/Entity.h>
 
 void NetworkClientSystem::configure(entityx::EventManager &event_manager)
 {
@@ -35,16 +36,21 @@ void NetworkClientSystem::update(entityx::EntityManager &es, entityx::EventManag
 
             sendHeartBeat();
         }
-
-        es.each<Playable, Actionable, Networkable>(
-            [&](entityx::Entity entity, Playable &playable, Actionable &actionable, Networkable &networkable) {
-                auto bitsetActions = Tools::actionsToBitset(actionable.actions);
+        if (mStatus == Connected)
+        {
+            auto self = es.get(mId);
+            if (self.valid() && self.has_component<Networkable>() && self.has_component<Actionable>())
+            {
+                const auto &actionable = self.component<Actionable>();
+                const auto &networkable = self.component<Networkable>();
+                auto bitsetActions = Tools::actionsToBitset(actionable->actions);
                 if (bitsetActions != mLastSentActions)
                 {
-                    sendActions(actionable, networkable );
+                    sendActions(actionable->actions);
                     mLastSentActions = bitsetActions;
                 }
-            });
+            }
+        }
     }
 }
 void NetworkClientSystem::handlePacket(sf::Packet &packet, entityx::EntityManager &entities,
@@ -64,6 +70,7 @@ void NetworkClientSystem::handlePacket(sf::Packet &packet, entityx::EntityManage
         break;
     case NetworkEvent::Type::WorldState:
         handleWorldState(entities, incomingEvent);
+        break;
     default:;
         break;
     }
@@ -72,9 +79,26 @@ void NetworkClientSystem::handlePacket(sf::Packet &packet, entityx::EntityManage
 }
 void NetworkClientSystem::handleWorldState(entityx::EntityManager &entities, NetworkEvent &incomingEvent)
 {
-    //    std::cout << "World State Received : " << incomingEvent.serverTick - mLastServerTick << std::endl;
+    if (incomingEvent.serverTick > mLastServerTick)
+    {
+        for (auto &[entityId, state] : incomingEvent.worldState)
+        {
+            auto &localId = mDistantToLocalEntitiesIds[entityId];
 
-    mLastServerTick = incomingEvent.serverTick;
+            //if (localId != mId)
+            {
+                auto entity = entities.get(localId);
+                if (entity.valid() && entity.has_component<Networkable>())
+                {
+                    auto &[serverRenderable, serverMovable, serverNetworkable] = state;
+                    auto networkable = entity.component<Networkable>();
+                    networkable->pushState(
+                        {incomingEvent.serverTick, serverRenderable, serverMovable, serverNetworkable});
+                }
+            }
+        }
+        mLastServerTick = incomingEvent.serverTick;
+    }
 }
 void NetworkClientSystem::handleEntityPosition(entityx::EntityManager &entities, NetworkEvent &incomingEvent)
 {
@@ -146,14 +170,14 @@ void NetworkClientSystem::sendEventToServer(const NetworkEvent &event)
         std::cout << "WARNING : cannot send packet... " << std::endl;
     }
 }
-void NetworkClientSystem::sendActions(const Actionable &actionable, const Networkable &networkable)
+void NetworkClientSystem::sendActions(const std::map<Actionable::Action, bool> &actions)
 {
     NetworkEvent event;
     event.type = NetworkEvent::Type::PlayerAction;
     event.serverEntityId = mLocalToDistantEntitiesIds[mId];
-    event.actions = actionable.actions;
+    event.actions = actions;
 
-    std::cout << "Sending Actions : " << Tools::actionsToBitset(actionable.actions).to_string()
+    std::cout << "Sending Actions : " << Tools::actionsToBitset(actions).to_string()
               << " Entity ID : " << event.serverEntityId.id() << std::endl;
 
     sendEventToServer(event);

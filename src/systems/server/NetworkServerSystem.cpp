@@ -29,9 +29,7 @@ void NetworkServerSystem::update(entityx::EntityManager &es, entityx::EventManag
         handlePacket(es, packet, sender, port);
     }
 
-    // std::cout << "Last broadcast : " << mLastRun << " Cumul Delta : " << mCumulDeltaT << std::endl;
-    //  100000
-    if (mCumulDeltaT - mLastRun > 1000)
+    if (mCumulDeltaT - mLastRun > (1000 / TICK_RATE) * 2)
     {
         mLastRun = mCumulDeltaT;
 
@@ -41,20 +39,31 @@ void NetworkServerSystem::update(entityx::EntityManager &es, entityx::EventManag
 }
 void NetworkServerSystem::broadcastWorldState(entityx::EntityManager &es)
 {
-    NetworkEvent eventOut;
-
-    prepareWorldStateEvent(es, eventOut);
-
-    for (auto it = mLocalEntitiesToDistantIps.begin(); it != mLocalEntitiesToDistantIps.end(); ++it)
+    if (es.size() > 1)
     {
-        auto toAdressPort = it->second;
+        NetworkEvent eventOut;
 
-        es.each<Renderable, Movable>([&](entityx::Entity entity, Renderable &renderable, Movable &movable) {
-            sf::Packet packetOut;
-            packetOut << eventOut;
+        prepareWorldStateEvent(es, eventOut);
 
-            sf::Socket::Status status = mSocket.send(packetOut, std::get<1>(toAdressPort), std::get<2>(toAdressPort));
-        });
+        if (eventOut.worldState.size() > 0)
+        {
+            // std::cout << "Sending world state no... ";
+            // std::cout << eventOut.serverTick << "... sending " << eventOut.worldState.size() << " states." <<
+            // std::endl;
+
+            for (auto it = mLocalEntitiesToDistantIps.begin(); it != mLocalEntitiesToDistantIps.end(); ++it)
+            {
+                auto toAdressPort = it->second;
+
+                es.each<Renderable, Movable>([&](entityx::Entity entity, Renderable &renderable, Movable &movable) {
+                    sf::Packet packetOut;
+                    packetOut << eventOut;
+
+                    sf::Socket::Status status =
+                        mSocket.send(packetOut, std::get<1>(toAdressPort), std::get<2>(toAdressPort));
+                });
+            }
+        }
     }
 }
 void NetworkServerSystem::prepareWorldStateEvent(entityx::EntityManager &es, NetworkEvent &eventOut)
@@ -63,7 +72,23 @@ void NetworkServerSystem::prepareWorldStateEvent(entityx::EntityManager &es, Net
     eventOut.type = NetworkEvent::Type::WorldState;
     es.each<Renderable, Movable, Networkable>(
         [&](entityx::Entity entity, Renderable &renderable, Movable &movable, Networkable &networkable) {
-            eventOut.worldState[entity.id()] = {renderable.mPos, movable.mAcceleration, networkable};
+            auto &buffer = networkable.stateBuffer;
+            if (buffer.size() > 0)
+            {
+                const auto &lastState = networkable.stateBuffer.front();
+                auto &[serverTick, bufferRenderable, bufferMovable, bufferNetworkable] = lastState;
+                if (bufferRenderable != renderable)
+                {
+                    networkable.stateBuffer.pop();
+                    networkable.needSendState = networkable.needSendState || true;
+                }
+            }
+            if (networkable.needSendState)
+            {
+                networkable.stateBuffer.push({mServerTickNumber, renderable, movable, networkable});
+                networkable.needSendState = false;
+                eventOut.worldState[entity.id()] = {renderable, movable, networkable};
+            }
         });
 }
 void NetworkServerSystem::handlePacket(entityx::EntityManager &es, sf::Packet &packet, sf::IpAddress &adress,
@@ -121,6 +146,7 @@ void NetworkServerSystem::handlePlayerAction(entityx::EntityManager &es, sf::Pac
         networkable->clientServerDelay = event.latency;
         actionable->actions = event.actions;
         networkable->isDesync = true;
+        networkable->needSendState = true;
     }
 }
 void NetworkServerSystem::handleKeyPressed(entityx::EntityManager &es, sf::Packet &packet, NetworkEvent &event,

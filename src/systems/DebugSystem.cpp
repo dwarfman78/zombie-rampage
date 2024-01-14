@@ -39,10 +39,10 @@ void DebugSystem::update(entityx::EntityManager &es, entityx::EventManager &even
                                {Tools::TILE_SIZE, Tools::TILE_SIZE}};
 
             drawRectOutlined(playerRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
-            drawRectOutlined(topLeftRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
-            drawRectOutlined(topRightRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
-            drawRectOutlined(bottomLeftRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
-            drawRectOutlined(bottomRightRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
+            // drawRectOutlined(topLeftRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
+            // drawRectOutlined(topRightRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
+            // drawRectOutlined(bottomLeftRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
+            // drawRectOutlined(bottomRightRect, sf::Color::White, Tools::TILE_SIZE, Tools::TILE_SIZE);
 
             drawVector(movable.mAcceleration, renderable.mPos, sf::Color::Blue);
 
@@ -51,7 +51,7 @@ void DebugSystem::update(entityx::EntityManager &es, entityx::EventManager &even
                 drawRectOutlined(mCe.mIntersect, sf::Color::Red, mCe.mIntersect.height, mCe.mIntersect.width);
             }
 
-            debugWorldState(mLastNe);
+            debugWorldState(mLastNe, es);
             drawPanel(dt);
         }
 
@@ -123,43 +123,26 @@ void DebugSystem::receive(const InterpolationEvent &event)
 {
     mLastWorldState = event.currentWorldState;
 }
-void DebugSystem::debugWorldState(const NetworkEvent &event)
+void DebugSystem::debugWorldState(const NetworkEvent &event, entityx::EntityManager &es)
 {
-    /*auto copyQueue = mWorldStateBuffer;
-    while (!copyQueue.empty())
-    {
-        auto worldState = copyQueue.front();
 
-        for (auto it = worldState.begin(); it != worldState.end(); ++it)
+    es.each<Networkable>([&](entityx::Entity entity, Networkable &networkable) {
+        if (networkable.stateBuffer.size() > 0)
         {
-            sf::FloatRect rect = {std::get<0>(it->second).mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
-            drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
-            drawVector(std::get<1>(it->second).mAcceleration, rect.getPosition(), sf::Color::Cyan);
+
+            bool firstBuff = true;
+            auto copyBuff = networkable.stateBuffer;
+            while (copyBuff.size() > 0)
+            {
+            sf::Color bufCol = firstBuff ? sf::Color::Red : sf::Color::Yellow;
+                firstBuff = false;
+                auto &state = copyBuff.front();
+                copyBuff.pop();
+                auto &[serverTick, serverRenderable, serverMovable, serverNetworkable] = state;
+                sf::FloatRect rect = {serverRenderable.mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
+                drawRectOutlined(rect, bufCol, Tools::TILE_SIZE, Tools::TILE_SIZE);
+                drawVector(serverMovable.mAcceleration, serverRenderable.mPos, sf::Color::Green);
+            }
         }
-
-        copyQueue.pop();
-    }*/
-
-    /*auto copyQueue = mWorldStateBuffer;
-    auto worldState = copyQueue.front();
-
-    for (auto &[entityId, state] : worldState)
-    {
-        auto &[stateRenderable, stateMovable, stateNetworkable] = state;
-
-        sf::FloatRect rect = {stateRenderable.mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
-        drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
-        drawVector(stateMovable.mAcceleration, rect.getPosition(), sf::Color::Cyan);
-    }*/
-
-    for (auto &[entityId, state] : mLastWorldState)
-    {
-        auto &[stateRenderable, stateMovable, stateNetworkable] = state;
-
-        sf::FloatRect rect = {stateRenderable.mPos, {Tools::TILE_SIZE, Tools::TILE_SIZE}};
-        drawRectOutlined(rect, sf::Color::Yellow, Tools::TILE_SIZE, Tools::TILE_SIZE);
-        drawVector(stateMovable.mAcceleration, rect.getPosition(), sf::Color::Cyan);
-        Tools::drawText(std::to_string(stateNetworkable.localId.id()) + "/" + std::to_string(stateNetworkable.distantId.id()), 15, rect.getPosition(),
-                        mTarget);
-    }
+    });
 }
