@@ -19,4 +19,6 @@
 #include <random>
 #include <sstream>
 #include <thread>
+#include <queue>
+
 #endif // ZR_COMMON_HPP
