@@ -1,4 +1,5 @@
 #include "../../../include/systems/client/TopDownRenderingSystem.hpp"
+#include <SFML/System/Angle.hpp>
 void TopDownRenderingSystem::configure(entityx::EventManager &event_manager)
 {
     // Chargement des textures
@@ -50,6 +51,13 @@ void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
         quad[1].texCoords = sf::Vector2f(0, mTileSize);
         quad[2].texCoords = sf::Vector2f(mTileSize, 0);
         quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+
+        // Applique la rotation du joueur selon le centre de rotation au centre de la tuile.
+        sf::Transform transform;
+        transform.rotate(sf::radians(renderable.mRotation),
+                         {renderable.mPos.x + mTileSize / 2, renderable.mPos.y + mTileSize / 2});
+
+        mPlayerState.transform = transform;
 
         // On dessine le joueur.
         mTarget.draw(quad, mPlayerState);

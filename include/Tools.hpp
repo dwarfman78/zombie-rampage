@@ -18,6 +18,10 @@ class Tools
             target.draw(textDrawn);
         }
     }
+    static sf::Vector2f convertToVFloat(const sf::Vector2i& vector2i)
+{
+      return {(float)vector2i.x,(float)vector2i.y};
+    }
     static bool segmentIntersects(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
     {
         float tn = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);

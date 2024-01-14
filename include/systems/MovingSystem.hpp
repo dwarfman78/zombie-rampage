@@ -24,6 +24,7 @@ class MovingSystem : public entityx::System<MovingSystem>, public entityx::Recei
     void configure(entityx::EventManager &event_manager);
     void receive(const CollisionEvent &event);
     void receive(const NetworkEvent &event);
+    void receive(const MouseEvent &event);
 
   private:
     void handleMovingActions(Actionable &actionable, Movable &movable);
@@ -31,6 +32,8 @@ class MovingSystem : public entityx::System<MovingSystem>, public entityx::Recei
 
     // maybe should be stored at the entity level
     std::map<entityx::Entity::Id, CollisionEvent> mCollisions;
+
+    ::Vec2f mMousePosition;
 
     bool mIsServer{false};
 };

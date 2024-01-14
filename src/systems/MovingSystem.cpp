@@ -2,36 +2,29 @@
 void MovingSystem::configure(entityx::EventManager &event_manager)
 {
     event_manager.subscribe<CollisionEvent>(*this);
-    event_manager.subscribe<NetworkEvent>(*this);
+    event_manager.subscribe<MouseEvent>(*this);
 }
 void MovingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
     es.each<Movable, Renderable, Actionable, Networkable>([&](entityx::Entity entity, Movable &movable,
                                                               Renderable &renderable, Actionable &actionable,
                                                               Networkable &networkable) {
-        std::string iama;
-        if (mIsServer)
-        {
-            iama = "server";
-        }
-        else
-        {
-            iama = "client";
-        }
         float deltaTimeFinal = static_cast<float>(dt);
 
         if (entity.has_component<Playable>())
         {
             handleMovingActions(actionable, movable);
+
+            ::Vec2f vA = mMousePosition - renderable.mPos;
+            ::Vec2f vB = {renderable.mPos.x, 0.f};
+
+            renderable.mRotation = acos(vA.dot(vB) / (vA.length() * vB.length()));
+            if (vA.y < 0)
+                renderable.mRotation *= -1;
         }
 
         handleCollisionEvents(entity, movable, renderable);
-//        if (movable.mAcceleration.lengthSq() != 0)
-//        {
-//            std::cout << "( " << iama << " )"
-//                      << "DeltaTime : " << deltaTimeFinal << " mPos : " << renderable.mPos.x << "," << renderable.mPos.y
-//                      << "\n mAcc : " << movable.mAcceleration.x << "," << movable.mAcceleration.y << std::endl;
-//        }
+
         renderable.mPos += movable.mAcceleration * (deltaTimeFinal / 1000.f);
         renderable.mRect = {renderable.mPos, {32, 32}};
     });
@@ -193,10 +186,9 @@ void MovingSystem::handleMovingActions(Actionable &actionable, Movable &movable)
 }
 void MovingSystem::receive(const CollisionEvent &event)
 {
-    CollisionEvent ce(event);
-
-    mCollisions[event.mEntityId] = ce;
+    mCollisions[event.mEntityId] = {event};
 }
-void MovingSystem::receive(const NetworkEvent &event)
+void MovingSystem::receive(const MouseEvent &event)
 {
+    mMousePosition = Tools::convertToVFloat(event.mPos);
 }

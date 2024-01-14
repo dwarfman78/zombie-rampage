@@ -14,6 +14,13 @@ struct TileMap
     std::vector<std::vector<unsigned int>> tileMap;
     TileMap()
     {
+        /// Créer un générateur de nombres aléatoires (Mersenne Twister)
+        std::random_device rd;
+        std::mt19937 generator(rd());
+
+        // Créer une distribution uniforme entre 0 et 1
+        std::uniform_int_distribution<int> distribution(0, 1);
+
         for (int i{0}; i < 1080 / Tools::TILE_SIZE; ++i)
         {
             std::vector<unsigned int> row;
@@ -25,7 +32,7 @@ struct TileMap
                 }
                 else
                 {
-                    row.push_back(0);
+                    row.push_back(0/*distribution(generator)*/);
                 }
             }
             tileMap.push_back(row);

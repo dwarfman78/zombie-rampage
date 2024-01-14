@@ -7,5 +7,6 @@ class Networkable;
 // Define types shortcuts
 using WorldState = std::map<entityx::Entity::Id, std::tuple<Renderable, Movable, Networkable>>;
 using Vec2f = sf::Vector2f;
+using Vec2i = sf::Vector2i;
 using State = std::tuple<unsigned int, Renderable, Movable, Networkable>;
 #endif

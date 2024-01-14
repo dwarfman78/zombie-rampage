@@ -17,6 +17,7 @@ struct Renderable
     }
     sf::Vector2f mPos;
     sf::FloatRect mRect;
+    float mRotation;
 };
 
 #endif
