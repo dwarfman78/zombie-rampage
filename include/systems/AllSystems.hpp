@@ -11,5 +11,6 @@
 #include "client/TopDownRenderingSystem.hpp"
 #include "server/NetworkServerSystem.hpp"
 #include "server/ResyncServerSystem.hpp"
+#include "client/AnimationSystem.hpp"
 
 #endif

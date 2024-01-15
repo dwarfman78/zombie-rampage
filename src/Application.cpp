@@ -4,7 +4,7 @@
 #include "../include/Application.hpp"
 #include <SFML/Window/WindowStyle.hpp>
 Application::Application(int argc, char **arguments)
-    : mWindow(sf::VideoMode(1920,1080), "Zombie Rampage", sf::Style::Fullscreen)
+    : mWindow(sf::VideoMode(1920, 1080), "Zombie Rampage", sf::Style::Fullscreen)
 {
 
     std::string lastArg;
@@ -30,6 +30,7 @@ Application::Application(int argc, char **arguments)
     systems.add<MouseManagingSystem>(mWindow);
     systems.add<CollisionSystem>();
     systems.add<NetworkClientSystem>();
+    systems.add<AnimationSystem>();
     systems.configure();
 
     entityx::Entity map = entities.create();
@@ -64,6 +65,7 @@ void Application::start()
             systems.update<InterpolationSystem>(WINDOW_SIZE_MILLI);
             systems.update<MovingSystem>(WINDOW_SIZE_MILLI);
             systems.update<CollisionSystem>(WINDOW_SIZE_MILLI);
+            systems.update<AnimationSystem>(WINDOW_SIZE_MILLI);
             acc = (acc - WINDOW_SIZE);
         }
 

@@ -8,6 +8,7 @@
 #include "../../components/Networkable.hpp"
 #include "../../components/Playable.hpp"
 #include "../../components/Renderable.hpp"
+#include "../../components/Animable.hpp"
 class NetworkClientSystem : public entityx::System<NetworkClientSystem>, public entityx::Receiver<NetworkClientSystem>
 {
     enum Status

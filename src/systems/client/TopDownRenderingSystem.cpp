@@ -39,7 +39,7 @@ void TopDownRenderingSystem::update(entityx::EntityManager &es, entityx::EventMa
 void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
 {
     // Pour chaque Joueur...
-    es.each<Renderable>([&](entityx::Entity entity, Renderable &renderable) {
+    es.each<Renderable, Animable>([&](entityx::Entity entity, Renderable &renderable, Animable &animable) {
         // Constitution du vecteur de points du joueur et affichage.
         sf::VertexArray quad(sf::TriangleStrip, 4);
         quad[0].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
@@ -47,12 +47,28 @@ void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
         quad[2].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y);
         quad[3].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y + mTileSize);
 
-        quad[0].texCoords = sf::Vector2f(0, 0);
-        quad[1].texCoords = sf::Vector2f(0, mTileSize);
-        quad[2].texCoords = sf::Vector2f(mTileSize, 0);
-        quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+        auto currentAnimationOpt = animable.getCurrentAnimation();
+        if (currentAnimationOpt.has_value())
+        {
+            auto currentFrame = currentAnimationOpt.value()->getCurrentFrame();
 
-        // Applique la rotation du joueur selon le centre de rotation au centre de la tuile.
+            if (!currentFrame.has_value())
+            {
+                quad[0].texCoords = sf::Vector2f(0, 0);
+                quad[1].texCoords = sf::Vector2f(0, mTileSize);
+                quad[2].texCoords = sf::Vector2f(mTileSize, 0);
+                quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+            }
+            else
+            {
+                auto animRec = currentFrame.value();
+                quad[0].texCoords = {animRec.left, animRec.top};
+                quad[1].texCoords = {animRec.left, animRec.top + mTileSize};
+                quad[2].texCoords = {animRec.left + mTileSize, animRec.top};
+                quad[3].texCoords = {animRec.left + mTileSize, animRec.top + mTileSize};
+            }
+        }
+        // Applique la rotation du joueur selon le centre de rotation positionné au centre de la tuile.
         sf::Transform transform;
         transform.rotate(sf::radians(renderable.mRotation),
                          {renderable.mPos.x + mTileSize / 2, renderable.mPos.y + mTileSize / 2});

@@ -85,7 +85,7 @@ void NetworkClientSystem::handleWorldState(entityx::EntityManager &entities, Net
         {
             auto &localId = mDistantToLocalEntitiesIds[entityId];
 
-            //if (localId != mId)
+            // if (localId != mId)
             {
                 auto entity = entities.get(localId);
                 if (entity.valid() && entity.has_component<Networkable>())
@@ -132,6 +132,7 @@ void NetworkClientSystem::handleEntityCreation(entityx::EntityManager &entities,
     e.assign<Renderable>(incomingEvent.entityPosition);
     e.assign<Movable>(sf::Vector2f(0.f, 0.f));
     e.assign<Actionable>();
+    e.assign<Animable>("player");
 
     if (mStatus == Pending && incomingEvent.clientUuid == mUuid)
     {

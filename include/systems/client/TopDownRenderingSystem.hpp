@@ -1,6 +1,7 @@
 #ifndef ZR_TOPDOWNRENDERINGSYSTEM_HPP
 #define ZR_TOPDOWNRENDERINGSYSTEM_HPP
 
+#include "../../../include/components/Animable.hpp"
 #include "../../../include/components/Movable.hpp"
 #include "../../../include/components/Playable.hpp"
 #include "../../../include/components/Renderable.hpp"
