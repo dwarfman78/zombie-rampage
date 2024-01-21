@@ -1,4 +1,5 @@
 #include "../../../include/systems/client/TopDownRenderingSystem.hpp"
+#include <SFML/Graphics/Rect.hpp>
 #include <SFML/System/Angle.hpp>
 void TopDownRenderingSystem::configure(entityx::EventManager &event_manager)
 {
@@ -27,6 +28,10 @@ void TopDownRenderingSystem::configure(entityx::EventManager &event_manager)
         std::cout << "  Player texture loaded from memory" << std::endl;
         mPlayerState.texture = &mPlayerTexture;
     }
+    if (mCrosshairTexture.loadFromMemory(crosshairsTextureData, crosshairsTextureDataSize))
+    {
+        std::cout << "  Crosshairs texture loaded from memory" << std::endl;
+    }
 }
 void TopDownRenderingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
@@ -35,48 +40,93 @@ void TopDownRenderingSystem::update(entityx::EntityManager &es, entityx::EventMa
 
     // Affichage du joueur.
     drawPlayer(es);
+
+    // Affichage du curseur.
+    drawCursor(es);
+}
+void TopDownRenderingSystem::drawCursor(entityx::EntityManager &es)
+{
+    es.each<Playable, Actionable>([&](entityx::Entity entity, Playable &playable, Actionable &actionable) {
+        sf::Sprite cursorSprite(mCrosshairTexture);
+        cursorSprite.setPosition(actionable.lookAt);
+        cursorSprite.setColor(sf::Color::White);
+        mTarget.draw(cursorSprite);
+    });
 }
 void TopDownRenderingSystem::drawPlayer(entityx::EntityManager &es)
 {
     // Pour chaque Joueur...
     es.each<Renderable, Animable>([&](entityx::Entity entity, Renderable &renderable, Animable &animable) {
-        // Constitution du vecteur de points du joueur et affichage.
-        sf::VertexArray quad(sf::TriangleStrip, 4);
-        quad[0].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
-        quad[1].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y + mTileSize);
-        quad[2].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y);
-        quad[3].position = sf::Vector2f(renderable.mPos.x + mTileSize, renderable.mPos.y + mTileSize);
-
-        auto currentAnimationOpt = animable.getCurrentAnimation();
+        auto currentAnimationOpt = animable.getCurrentAnimationList();
         if (currentAnimationOpt.has_value())
         {
-            auto currentFrame = currentAnimationOpt.value()->getCurrentFrame();
+            // Constitution du vecteur de points du joueur et affichage.
+            sf::VertexArray quad(sf::TriangleStrip, 4 * currentAnimationOpt.value()->size());
 
-            if (!currentFrame.has_value())
+            unsigned int i{0};
+            for (auto &animation : *currentAnimationOpt.value())
             {
-                quad[0].texCoords = sf::Vector2f(0, 0);
-                quad[1].texCoords = sf::Vector2f(0, mTileSize);
-                quad[2].texCoords = sf::Vector2f(mTileSize, 0);
-                quad[3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+                unsigned int quadIndex1, quadIndex2, quadIndex3, quadIndex4;
+                quadIndex1 = 0 + i * 4;
+                quadIndex2 = 1 + i * 4;
+                quadIndex3 = 2 + i * 4;
+                quadIndex4 = 3 + i * 4;
+
+                auto currentFrame = animation.getCurrentFrame();
+                if (!currentFrame.has_value())
+                {
+                    quad[quadIndex1].texCoords = sf::Vector2f(0, 0);
+                    quad[quadIndex2].texCoords = sf::Vector2f(0, mTileSize);
+                    quad[quadIndex3].texCoords = sf::Vector2f(mTileSize, 0);
+                    quad[quadIndex4].texCoords = sf::Vector2f(mTileSize, mTileSize);
+                }
+                else
+                {
+                    auto animRec = currentFrame.value();
+                    if (i % 2 == 0)
+                    {
+                        quad[quadIndex1].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
+                        quad[quadIndex2].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y + animRec.height);
+                        quad[quadIndex3].position = sf::Vector2f(renderable.mPos.x + animRec.width, renderable.mPos.y);
+                        quad[quadIndex4].position =
+                            sf::Vector2f(renderable.mPos.x + animRec.width, renderable.mPos.y + animRec.height);
+                    }
+                    else
+                    {
+                        quad[quadIndex1].position =
+                            sf::Vector2f(renderable.mPos.x + animRec.width, renderable.mPos.y + animRec.height);
+                        quad[quadIndex2].position = sf::Vector2f(renderable.mPos.x + animRec.width, renderable.mPos.y);
+                        quad[quadIndex3].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y + animRec.height);
+                        quad[quadIndex4].position = sf::Vector2f(renderable.mPos.x, renderable.mPos.y);
+                    }
+                    if (i % 2 == 0)
+                    {
+                        quad[quadIndex1].texCoords = {animRec.left, animRec.top};
+                        quad[quadIndex2].texCoords = {animRec.left, animRec.top + animRec.height};
+                        quad[quadIndex3].texCoords = {animRec.left + animRec.width, animRec.top};
+                        quad[quadIndex4].texCoords = {animRec.left + animRec.width, animRec.top + animRec.height};
+                    }
+                    else
+                    {
+
+                        quad[quadIndex1].texCoords = {animRec.left + animRec.width, animRec.top + animRec.height};
+                        quad[quadIndex2].texCoords = {animRec.left + animRec.width, animRec.top};
+                        quad[quadIndex3].texCoords = {animRec.left, animRec.top + animRec.height};
+                        quad[quadIndex4].texCoords = {animRec.left, animRec.top};
+                    }
+                }
+                i++;
             }
-            else
-            {
-                auto animRec = currentFrame.value();
-                quad[0].texCoords = {animRec.left, animRec.top};
-                quad[1].texCoords = {animRec.left, animRec.top + mTileSize};
-                quad[2].texCoords = {animRec.left + mTileSize, animRec.top};
-                quad[3].texCoords = {animRec.left + mTileSize, animRec.top + mTileSize};
-            }
+            // Applique la rotation du joueur selon le centre de rotation positionné au centre de la tuile.
+            sf::Transform transform;
+            transform.rotate(sf::radians(renderable.mRotation),
+                             {renderable.mPos.x + mTileSize / 2, renderable.mPos.y + mTileSize / 2});
+
+            mPlayerState.transform = transform;
+
+            // On dessine le joueur.
+            mTarget.draw(quad, mPlayerState);
         }
-        // Applique la rotation du joueur selon le centre de rotation positionné au centre de la tuile.
-        sf::Transform transform;
-        transform.rotate(sf::radians(renderable.mRotation),
-                         {renderable.mPos.x + mTileSize / 2, renderable.mPos.y + mTileSize / 2});
-
-        mPlayerState.transform = transform;
-
-        // On dessine le joueur.
-        mTarget.draw(quad, mPlayerState);
     });
 }
 void TopDownRenderingSystem::drawBackground(entityx::EntityManager &es)
@@ -143,10 +193,21 @@ void TopDownRenderingSystem::drawBackground(entityx::EntityManager &es)
                 if (map.tileMap[y][x] == 0)
                 {
                     // Pose des textures, si c'est 0 on pose une texture du sol.
-                    quad[quadIndex].texCoords = sf::Vector2f(0, 0);
-                    quad[quadIndex + 1].texCoords = sf::Vector2f(0, mTileSize);
-                    quad[quadIndex + 2].texCoords = sf::Vector2f(mTileSize, 0);
-                    quad[quadIndex + 3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+                    if (sens)
+                    {
+                        // Les points de coord de la texture dépendent également du sens.
+                        quad[quadIndex].texCoords = sf::Vector2f(0, 0);
+                        quad[quadIndex + 1].texCoords = sf::Vector2f(0, mTileSize);
+                        quad[quadIndex + 2].texCoords = sf::Vector2f(mTileSize, 0);
+                        quad[quadIndex + 3].texCoords = sf::Vector2f(mTileSize, mTileSize);
+                    }
+                    else
+                    {
+                        quad[quadIndex].texCoords = sf::Vector2f(mTileSize, mTileSize);
+                        quad[quadIndex + 1].texCoords = sf::Vector2f(mTileSize, 0);
+                        quad[quadIndex + 2].texCoords = sf::Vector2f(0, mTileSize);
+                        quad[quadIndex + 3].texCoords = sf::Vector2f(0, 0);
+                    }
                 }
                 else
                 {

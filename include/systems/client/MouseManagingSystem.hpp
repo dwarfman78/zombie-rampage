@@ -1,7 +1,10 @@
 #ifndef ZR_MOUSEMANAGINGSYSTEM
 #define ZR_MOUSEMANAGINGSYSTEM
 
+#include "../../Tools.hpp"
+#include "../../components/Actionable.hpp"
 #include "../../components/Events.hpp"
+#include "../../components/Playable.hpp"
 #include "../client/RenderingSystem.hpp"
 class MouseManagingSystem : public entityx::System<MouseManagingSystem>
 {

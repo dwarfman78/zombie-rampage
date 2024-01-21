@@ -2,6 +2,9 @@
 #define ZR_ANIMATIONSYSTEM_HPP
 #include "../../Common.hpp"
 #include "../../components/Animable.hpp"
+/**
+  * Classe permettant de gérer les animations des entités.
+**/
 class AnimationSystem : public entityx::System<AnimationSystem>
 {
   public:

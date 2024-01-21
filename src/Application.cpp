@@ -4,7 +4,7 @@
 #include "../include/Application.hpp"
 #include <SFML/Window/WindowStyle.hpp>
 Application::Application(int argc, char **arguments)
-    : mWindow(sf::VideoMode(1920, 1080), "Zombie Rampage", sf::Style::Fullscreen)
+    : mWindow(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Zombie Rampage", sf::Style::Fullscreen)
 {
 
     std::string lastArg;
@@ -41,6 +41,7 @@ void Application::start()
 {
 
     std::cout << "Application started !" << std::endl;
+    mWindow.setMouseCursorVisible(false);
 
     sf::Clock deltaClock;
     sf::Int32 acc = 0;

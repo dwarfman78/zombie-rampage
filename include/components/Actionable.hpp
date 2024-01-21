@@ -1,9 +1,10 @@
 #ifndef ZR_ACTIONABLE_HPP
 #define ZR_ACTIONABLE_HPP
 #include "../Common.hpp"
+#include "../Usings.hpp"
 struct Actionable
 {
-    enum Action
+    enum class Action
     {
         RUNUP,
         RUNDOWN,
@@ -29,5 +30,6 @@ struct Actionable
     }
 
     std::map<Action, bool> actions;
+    ::Vec2f lookAt;
 };
 #endif

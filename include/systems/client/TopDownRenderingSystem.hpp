@@ -7,6 +7,8 @@
 #include "../../../include/components/Renderable.hpp"
 #include "../../../include/components/TileMap.hpp"
 #include "../../Common.hpp"
+#include "../../assets/crosshairs.png.hpp"
+#include "../../assets/feetswalk.png.hpp"
 #include "../../assets/player.png.hpp"
 #include "../../assets/tile.png.hpp"
 #include "../client/RenderingSystem.hpp"
@@ -51,6 +53,12 @@ class TopDownRenderingSystem : public RenderingSystem<TopDownRenderingSystem>
      */
     void drawPlayer(entityx::EntityManager &es);
 
+    /**
+     * @brif Affiche le curseur du joueur.
+     * @param es entity manager.
+     * */
+    void drawCursor(entityx::EntityManager &es);
+
     /* Taille d'une tuile */
     unsigned int mTileSize = 32;
 
@@ -61,6 +69,12 @@ class TopDownRenderingSystem : public RenderingSystem<TopDownRenderingSystem>
     /* Player sprites */
     sf::Texture mPlayerTexture;
     sf::RenderStates mPlayerState;
+
+    /* Crosshair sprite */
+    sf::Texture mCrosshairTexture;
+
+    /* Feets texture */
+    sf::Texture mFeetTexture;
 };
 
 #endif

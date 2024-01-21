@@ -2,13 +2,19 @@
 
 void MouseManagingSystem::configure(entityx::EventManager &event_manager)
 {
-// event_manager.subscribe<sf::Event>(*this);
+    // event_manager.subscribe<sf::Event>(*this);
 }
 void MouseManagingSystem::update(entityx::EntityManager &es, entityx::EventManager &events, entityx::TimeDelta dt)
 {
-    MouseEvent me;
+    if (mWindow.hasFocus())
+    {
+        MouseEvent me;
 
-    me.mPos = sf::Mouse::getPosition(mWindow);
+        me.mPos = sf::Mouse::getPosition(mWindow);
 
-    events.emit(me);
+        events.emit(me);
+        es.each<Playable, Actionable>([&](entityx::Entity entity, Playable &playable, Actionable &actionable) {
+            actionable.lookAt = Tools::convertToVFloat(me.mPos);
+        });
+    }
 }

@@ -2,6 +2,7 @@
 #define ZR_TOOLS_HPP
 #include "Common.hpp"
 #include "components/Actionable.hpp"
+#include <SFML/System/Vector2.hpp>
 class Tools
 {
   public:
@@ -18,9 +19,19 @@ class Tools
             target.draw(textDrawn);
         }
     }
-    static sf::Vector2f convertToVFloat(const sf::Vector2i& vector2i)
-{
-      return {(float)vector2i.x,(float)vector2i.y};
+    static std::vector<sf::FloatRect> createAnimation(unsigned int row, unsigned int frames, sf::Vector2f frameSize,
+                                                      float vertOffset)
+    {
+        std::vector<sf::FloatRect> animation;
+        for (unsigned int i{0}; i < frames; ++i)
+        {
+            animation.push_back(sf::FloatRect({(float)i * frameSize.x, (float)row * vertOffset}, frameSize));
+        }
+        return animation;
+    }
+    static sf::Vector2f convertToVFloat(const sf::Vector2i &vector2i)
+    {
+        return {(float)vector2i.x, (float)vector2i.y};
     }
     static bool segmentIntersects(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
     {
